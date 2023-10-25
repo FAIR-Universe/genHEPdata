@@ -27,6 +27,9 @@ Check:epTolErr = 1e-2
 
 ! 4) Process settings
 
-HiggsSM:all = on
-25:onMode = off
-25:onIfMatch = 15 15
+WeakSingleBoson:all = on            ! switch on Single Boson production
+WeakZ0:gmZmode = 0                  ! full gamma*/Z0 structure, with interference included
+WeakBosonAndParton:all = on         ! switch on V + jets 
+
+24:onMode = on                      ! turining on W+/- production
+23:onMode = off                     ! only allowing Z-> tau tau decay

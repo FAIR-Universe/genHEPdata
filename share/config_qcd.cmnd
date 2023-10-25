@@ -14,6 +14,7 @@ Next:numberCount = 1000                 ! print message every n events
 Next:numberShowInfo = 0                 ! print event information n times
 Next:numberShowProcess = 1              ! print process record n times
 Next:numberShowEvent = 0                ! print event record n times
+PhaseSpace:pTHatMin = 300.
 
 ! 3) Beam and energy parameters
 
@@ -27,6 +28,5 @@ Check:epTolErr = 1e-2
 
 ! 4) Process settings
 
-HiggsSM:all = on
-25:onMode = off
-25:onIfMatch = 15 15
+HardQCD:all = on                        ! QCD 2->2
+HardQCD:nQuarkNew = 5                   !include charms and bottoms in QCD sample!

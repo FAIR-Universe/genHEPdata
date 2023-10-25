@@ -27,6 +27,4 @@ Check:epTolErr = 1e-2
 
 ! 4) Process settings
 
-HiggsSM:all = on
-25:onMode = off
-25:onIfMatch = 15 15
+Top:all = on
