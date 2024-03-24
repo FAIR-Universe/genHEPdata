@@ -1,11 +1,11 @@
 #!/bin/bash
 module load python
 shifter --image=rootproject/root:latest /bin/bash
-export PYTHIA8=/global/cfs/projectdirs/atlas/elham/Pythia8
+export PYTHIA8=/global/cfs/cdirs/m4287/hep/Pythia8
 
 # define the paths
-export Delphes_Path=/global/cfs/projectdirs/atlas/elham/Delphes-3.5.0/
-export WorkDir=/global/cfs/projectdirs/atlas/elham/fair_universe_simulation/
+export Delphes_Path=/global/cfs/cdirs/m4287/hep/Delphes-3.5.0/
+export WorkDir=/global/cfs/cdirs/m4287/hep/fair_universe_simulation/
 
 cd $Delphes_Path
 
