@@ -8,11 +8,11 @@
 #SBATCH -J pythia_gen
 
 module load python
-# export PYTHIA8=/global/cfs/projectdirs/atlas/elham/Pythia8
-export OutputDir=/global/cfs/projectdirs/atlas/elham/fair_universe_simulation/higgs_extrabkgs/
+# export PYTHIA8=/global/cfs/cdirs/m4287/hep//Pythia8
+export OutputDir=/global/cfs/cdirs/m4287/hep/Delphes_PYTHIA8_output/higgs_extrabkgs/
 
 shifter --image=rootproject/root:latest /bin/bash generate_events.sh $1 $2
-cd /global/cfs/projectdirs/atlas/elham/Delphes-3.5.0/
-shifter --image=rootproject/root:latest root -l /global/cfs/projectdirs/atlas/elham/fair_universe_simulation/Fair_Universe_Delphes/src/preProcess.C\(\"$OutputDir/pythia_$2"_"$1.root\",\"$OutputDir/hist_$2"_"$1\",0,200000,1\)
+cd /global/cfs/cdirs/m4287/hep/Delphes-3.5.0/
+shifter --image=rootproject/root:latest root -l ./preProcess.C\(\"$OutputDir/pythia_$2"_"$1.root\",\"$OutputDir/hist_$2"_"$1\",0,200000,1\)
 
 # source generate_events.sh $1 $2
