@@ -13,12 +13,6 @@ int generateSeed()
     return dist(gen);
 }
 
-// Function to check if a seed is in the used seeds file
-bool isSeedUsed(int seed, const std::vector<int> &usedSeedList)
-{
-    return std::find(usedSeedList.begin(), usedSeedList.end(), seed) != usedSeedList.end();
-}
-
 void writeRandomSeedToFile(const std::vector<int> &generateSeedList, const std::string &filename)
 {
     std::ofstream file(filename, std::ios::app);
@@ -69,12 +63,12 @@ int main(int argc, char *argv[])
         usedSeedList.push_back(usedSeed);
     }
 
-
     int seed_num = 0;
     while (seed_num < max_seed)
     {
         seed = generateSeed();
-        if (isSeedUsed(seed, usedSeedList))
+        bool isSeedUsed = std::find(usedSeedList.begin(), usedSeedList.end(), seed) != usedSeedList.end();
+        if (isSeedUsed)
         {
             std::cout << "Seed is already used." << std::endl;
             continue;
