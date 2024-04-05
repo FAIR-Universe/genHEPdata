@@ -37,18 +37,18 @@ int main(int argc, char *argv[])
     }
     std::string filename = argv[1];
     int max_seed = std::stoi(argv[2]);
-    std::string Process = argv[3];
+    std::string process = argv[3];
 
-    std::string Label = "0";
+    std::string label = "0";
     if (argc == 5)
     {
-        Label = argv[4];
+        label = argv[4];
     }
 
     std::string current_file = "/global/cfs/cdirs/m4287/hep/genHEPdata/scripts/";
     int seed;
-    std::vector<int> generateSeedList;
-    std::vector<int> usedSeedList;
+    std::vector<int> generate_seed_list;
+    std::vector<int> used_seed_list;
 
     std::ifstream file(filename, std::ios::app);
     if (!file)
@@ -57,18 +57,18 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    int usedSeed;
-    while (file >> usedSeed)
+    int used_seed;
+    while (file >> used_seed)
     {
-        usedSeedList.push_back(usedSeed);
+        used_seed_list.push_back(used_seed);
     }
 
     int seed_num = 0;
     while (seed_num < max_seed)
     {
         seed = generateSeed();
-        bool isSeedUsed = std::find(usedSeedList.begin(), usedSeedList.end(), seed) != usedSeedList.end();
-        if (isSeedUsed)
+        bool is_seed_used = std::find(used_seed_list.begin(), used_seed_list.end(), seed) != used_seed_list.end();
+        if (is_seed_used)
         {
             std::cout << "Seed is already used." << std::endl;
             continue;
@@ -76,15 +76,15 @@ int main(int argc, char *argv[])
         std::cout << "Generated seed: " << seed << std::endl;
         auto seed_str = std::to_string(seed);
 
-        auto command = std::string("sbatch ") + current_file + "run_batch.sh " + seed_str + " " + Process + " " + Label;
+        auto command = std::string("sbatch ") + current_file + "run_batch.sh " + seed_str + " " + process + " " + label;
 
         system(command.c_str());
 
-        generateSeedList.push_back(seed);
+        generate_seed_list.push_back(seed);
         seed_num++;
     }
 
-    writeRandomSeedToFile(generateSeedList, filename);
+    writeRandomSeedToFile(generate_seed_list, filename);
 
     return 0;
 }
