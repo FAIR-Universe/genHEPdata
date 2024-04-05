@@ -14,28 +14,12 @@ int generateSeed()
 }
 
 // Function to check if a seed is in the used seeds file
-bool isSeedUsed(int seed, const std::string &filename)
+bool isSeedUsed(int seed, const std::vector<int> &usedSeedList)
 {
-    std::ifstream file(filename);
-    if (!file)
-    {
-        std::cerr << "Error opening file: " << filename << std::endl;
-        return false;
-    }
-
-    int usedSeed;
-    while (file >> usedSeed)
-    {
-        if (usedSeed == seed)
-        {
-            return true;
-        }
-    }
-
-    return false;
+    return std::find(usedSeedList.begin(), usedSeedList.end(), seed) != usedSeedList.end();
 }
 
-void writeRamdomSeedToFile(const std::vector<int> &generateSeedList, const std::string &filename)
+void writeRandomSeedToFile(const std::vector<int> &generateSeedList, const std::string &filename)
 {
     std::ofstream file(filename, std::ios::app);
     if (!file)
@@ -70,12 +54,27 @@ int main(int argc, char *argv[])
     std::string current_file = "/global/cfs/cdirs/m4287/hep/genHEPdata/scripts/";
     int seed;
     std::vector<int> generateSeedList;
+    std::vector<int> usedSeedList;
+
+    std::ifstream file(filename, std::ios::app);
+    if (!file)
+    {
+        std::cerr << "Error opening file: " << filename << std::endl;
+        return 1;
+    }
+
+    int usedSeed;
+    while (file >> usedSeed)
+    {
+        usedSeedList.push_back(usedSeed);
+    }
+
 
     int seed_num = 0;
     while (seed_num < max_seed)
     {
         seed = generateSeed();
-        if (isSeedUsed(seed, filename))
+        if (isSeedUsed(seed, usedSeedList))
         {
             std::cout << "Seed is already used." << std::endl;
             continue;
@@ -91,7 +90,7 @@ int main(int argc, char *argv[])
         seed_num++;
     }
 
-    writeRamdomSeedToFile(generateSeedList, filename);
+    writeRandomSeedToFile(generateSeedList, filename);
 
     return 0;
 }

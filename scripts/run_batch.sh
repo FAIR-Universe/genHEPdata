@@ -20,6 +20,6 @@ if [ ! -d $csv_files ]; then
     mkdir $csv_files
 fi
 
-shifter --image=rootproject/root:latest root -l $WorkDir/scripts/preProcess.C\(\"$OutputDir/root_files/pythia_$2"_"$1.root\",\"$csv_files/hist_$2"_"$1\",$3\)
+shifter --image=rootproject/root:latest root -l $WorkDir/scripts/preProcess.cpp\(\"$OutputDir/root_files/pythia_$2"_"$1.root\",\"$csv_files/hist_$2"_"$1\",$3\)
 
 # source generate_events.sh $1 $2
