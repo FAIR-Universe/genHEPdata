@@ -1,9 +1,12 @@
 #!/bin/bash
 
 PROCESS=$1
+Label=$2
 
-for i in {1..10}
+export WorkDir=/global/cfs/cdirs/m4287/hep/genHEPdata
+
+for i in {1..100}
 do
    echo "Generating $PROCESS Events. ======>  SEED =  $i "
-   sbatch run_batch.sh $i $PROCESS
+   sbatch $WorkDir/scripts/run_batch.sh $i $PROCESS $Label
 done
