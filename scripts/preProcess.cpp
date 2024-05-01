@@ -20,7 +20,6 @@ class ExRootResult;
 #include <vector>
 #include <array>
 
-
 //------------------------------------------------------------------------------
 
 void AnalyseEvents(ExRootTreeReader *treeReader, std::string outputFile_part, const int label)
@@ -54,7 +53,6 @@ void AnalyseEvents(ExRootTreeReader *treeReader, std::string outputFile_part, co
     Int_t flag_el = 0;
     Int_t flag_mu = 0;
     Int_t flag_had = 0;
-
 
     std::string output_filename;
 
@@ -186,32 +184,37 @@ void AnalyseEvents(ExRootTreeReader *treeReader, std::string outputFile_part, co
             auto jet = (Jet *)branchJet->At(i);
             if (jet->PT < 20.0)
             {
-            continue;
+                continue;
             }
             n_jet++;
             jet_all_pt += jet->PT;
 
             for (int j = 0; j < 3; j++)
             {
-            if (jet->PT > pt_jet[j])
-            {
-                for (int k = 2; k > j; k--)
+                if (jet->PT > pt_jet[j])
                 {
-                pt_jet[k] = pt_jet[k - 1];
-                eta_jet[k] = eta_jet[k - 1];
-                phi_jet[k] = phi_jet[k - 1];
-                charge_jet[k] = charge_jet[k - 1];
-                p_jet[k] = p_jet[k - 1];
-                }
+                    for (int k = 2; k > j; k--)
+                    {
+                        pt_jet[k] = pt_jet[k - 1];
+                        eta_jet[k] = eta_jet[k - 1];
+                        phi_jet[k] = phi_jet[k - 1];
+                        charge_jet[k] = charge_jet[k - 1];
+                        p_jet[k] = p_jet[k - 1];
+                    }
 
-                pt_jet[j] = jet->PT;
-                eta_jet[j] = jet->Eta;
-                phi_jet[j] = jet->Phi;
-                charge_jet[j] = jet->Charge;
-                p_jet[j] = jet->P4();
-                break;
+                    pt_jet[j] = jet->PT;
+                    eta_jet[j] = jet->Eta;
+                    phi_jet[j] = jet->Phi;
+                    charge_jet[j] = jet->Charge;
+                    p_jet[j] = jet->P4();
+                    break;
+                }
             }
-            }
+        }
+
+        if (n_jet < 2)
+        {
+            pt_jet[1] = eta_jet[1] =  phi_jet[1] = charge_jet[1] = -7;
         }
 
         process_flag = event->ProcessID;
@@ -221,17 +224,16 @@ void AnalyseEvents(ExRootTreeReader *treeReader, std::string outputFile_part, co
         myfile_part << entry << ",";
         myfile_part << pt_lep << "," << eta_lep << "," << phi_lep << "," << charge_lep << "," << flag_el << "," << flag_mu << ",";
         myfile_part << pt_had << "," << eta_had << "," << phi_had << "," << charge_had << ",";
-        for (int j = 0; j < 3; j++)
-        {
-            myfile_part << pt_jet[j] << "," << eta_jet[j] << "," << phi_jet[j] << "," << charge_jet[j] << ",";
-        }
-        myfile_part << n_jet << "," << jet_all_pt << ",";
-        myfile_part << missingET->MET << "," << missingET->Phi << ",";
+        myfile_part << pt_jet[0] << "," << eta_jet[0] << "," << phi_jet[0] << "," << charge_jet[0] << ",";
+        myfile_part << pt_jet[1] << "," << eta_jet[1] << "," << phi_jet[1] << "," << charge_jet[1] << ",";
+    
+    myfile_part << n_jet << "," << jet_all_pt << ",";
+    myfile_part << missingET->MET << "," << missingET->Phi << ",";
 
-        myfile_part << Weight << "," << label << "," << process_flag << std::endl;
-    }
-    outfile->Write();
-    outfile->Close();
+    myfile_part << Weight << "," << label << "," << process_flag << std::endl;
+}
+outfile->Write();
+outfile->Close();
 }
 //------------------------------------------------------------------------------
 
