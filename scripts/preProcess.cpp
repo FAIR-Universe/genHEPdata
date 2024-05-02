@@ -219,7 +219,7 @@ void AnalyseEvents(ExRootTreeReader *treeReader, std::string outputFile_part, co
 
         process_flag = event->ProcessID;
         cross_section = event->CrossSection;
-        Weight = luminosity * cross_section;
+        Weight = 1;
 
         myfile_part << entry << ",";
         myfile_part << pt_lep << "," << eta_lep << "," << phi_lep << "," << charge_lep << "," << flag_el << "," << flag_mu << ",";
