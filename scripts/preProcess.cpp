@@ -214,11 +214,10 @@ void AnalyseEvents(ExRootTreeReader *treeReader, std::string outputFile_part, co
 
         if (n_jet < 2)
         {
-            pt_jet[1] = eta_jet[1] =  phi_jet[1] = charge_jet[1] = -7;
+            pt_jet[1] = eta_jet[1] = phi_jet[1] = charge_jet[1] = -7;
         }
 
         process_flag = event->ProcessID;
-        cross_section = event->CrossSection;
         Weight = 1;
 
         myfile_part << entry << ",";
@@ -226,14 +225,14 @@ void AnalyseEvents(ExRootTreeReader *treeReader, std::string outputFile_part, co
         myfile_part << pt_had << "," << eta_had << "," << phi_had << "," << charge_had << ",";
         myfile_part << pt_jet[0] << "," << eta_jet[0] << "," << phi_jet[0] << "," << charge_jet[0] << ",";
         myfile_part << pt_jet[1] << "," << eta_jet[1] << "," << phi_jet[1] << "," << charge_jet[1] << ",";
-    
-    myfile_part << n_jet << "," << jet_all_pt << ",";
-    myfile_part << missingET->MET << "," << missingET->Phi << ",";
 
-    myfile_part << Weight << "," << label << "," << process_flag << std::endl;
-}
-outfile->Write();
-outfile->Close();
+        myfile_part << n_jet << "," << jet_all_pt << ",";
+        myfile_part << missingET->MET << "," << missingET->Phi << ",";
+
+        myfile_part << Weight << "," << label << "," << process_flag << std::endl;
+    }
+    outfile->Write();
+    outfile->Close();
 }
 //------------------------------------------------------------------------------
 
