@@ -52,11 +52,13 @@ class DataPreprocessing:
         for file in os.listdir(file_read_loc):
             if file.endswith(".csv"):
                 file_path = os.path.join(file_read_loc, file)
-                data_frames.append(pd.read_csv(file_path))
+                data = pd.read_csv(file_path)
+                data.columns = columns
+                data_frames.append(data)
+                
 
         self.data = pd.concat(data_frames)
-        self.data = self.data.drop_duplicates()
-        self.data.columns = columns
+        print(self.data.describe())
 
     def to_parquet(self, output_file_name):
         parquet_file_name = output_file_name.with_suffix(".parquet")

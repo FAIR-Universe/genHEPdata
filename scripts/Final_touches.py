@@ -62,7 +62,6 @@ def from_parquet(data, file_read_loc):
             print("No parquet file found")
 
 
-
 def train_test_data_generator(full_data, verbose=0):
 
     print("root - dir", root_dir)
@@ -72,7 +71,7 @@ def train_test_data_generator(full_data, verbose=0):
     test_set = {
         "Z": pd.DataFrame(),
         "W": pd.DataFrame(),
-        "QCD": pd.DataFrame(),
+        "Diboson": pd.DataFrame(),
         "TT": pd.DataFrame(),
         "H": pd.DataFrame(),
     }
@@ -80,7 +79,7 @@ def train_test_data_generator(full_data, verbose=0):
     train_set = {
         "Z": pd.DataFrame(),
         "W": pd.DataFrame(),
-        "QCD": pd.DataFrame(),
+        "Diboson": pd.DataFrame(),
         "TT": pd.DataFrame(),
         "H": pd.DataFrame(),
     }
@@ -100,7 +99,7 @@ def dataGenerator(verbose=0):
     full_data = {
         "Z": pd.DataFrame(),
         "W": pd.DataFrame(),
-        "QCD": pd.DataFrame(),
+        "Diboson": pd.DataFrame(),
         "TT": pd.DataFrame(),
         "H": pd.DataFrame(),
     }
@@ -184,17 +183,15 @@ def dataGenerator(verbose=0):
     if not os.path.exists(test_settings_path):
         os.makedirs(test_settings_path)
 
-    Z_test_set = Z_test_set.sample(frac=1).reset_index(drop=True)
-
     for key in test_set.keys():
         print(f"[*] --- {key} : {test_set[key].shape}")
         test_set[key] = test_set[key].round(3)
         if CSV:
-            test_data_path = os.path.join(test_data_path, f"{key}.csv")
+            test_data_path = os.path.join(test_data_path, f"{key}_data.csv")
             test_set[key].to_csv(test_data_path, index=False)
 
         if PARQUET:
-            test_data_path = os.path.join(test_data_path, f"{key}.parquet")
+            test_data_path = os.path.join(test_data_path, f"{key}_data.parquet")
             test_set[key].to_parquet(test_data_path, index=False)
 
     mu = np.random.uniform(0, 3, 10)
