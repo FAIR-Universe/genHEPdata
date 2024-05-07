@@ -32,7 +32,9 @@ def clean_data(data_set):
         df.pop("PRI_muon_flag")
         df.pop("PRI_electron_flag")
         df.sample(frac=1).reset_index(drop=True)
+        df = DER_data(df)
         data_set[key] = df
+        
     return data_set
 
 
