@@ -1,3 +1,4 @@
 [submodule "HEP-Challenge"]
 	path = HEP-Challenge
 	url = https://github.com/FAIR-Universe/HEP-Challenge.git
+	branch = updating_systematics
