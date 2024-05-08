@@ -15,12 +15,10 @@ write_dir = os.path.join(root_dir, "Data_HEP")
 systematics_path = os.path.join(parent_dir, "HEP-Challenge", "ingestion_program")
 
 sys.path.append(systematics_path)
-from systematics import Systematics, DER_data, Reweight
+from systematics import Systematics, DER_data, reweight
 from config import LHC_NUMBERS, CSV, PARQUET
 
 import argparse
-
-
 
 
 # Load the CSV file
@@ -28,7 +26,7 @@ def clean_data(data_set):
     for key in data_set.keys():
         df = data_set[key]
         df = df.drop_duplicates()
-        df.pop("EventId")
+        df.pop("entry")
         df.pop("PRI_lep_charge")
         df.pop("PRI_had_charge")
         df.pop("PRI_jet_leading_charge")
@@ -89,12 +87,16 @@ def train_test_data_generator(full_data, verbose=0):
         "H": pd.DataFrame(),
     }
 
+    print("\n[*] -- full_data")
     for key in full_data.keys():
         print(f"[*] --- {key} : {full_data[key].shape}")
-
-        train_set[key], test_set[key] = train_test_split(
-            full_data[key], test_size=LHC_NUMBERS[key] * 10, random_state=42
-        )
+        try:
+            train_set[key], test_set[key] = train_test_split(
+                full_data[key], test_size=int(LHC_NUMBERS[key] * 0.001), random_state=42
+            )
+        except ValueError:
+            print(f"ValueError at {key}, test_size={int(LHC_NUMBERS[key] * 0.001)} and shape={full_data[key].shape}")
+            
 
     return train_set, test_set
 
@@ -122,6 +124,7 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
     train_set, test_set = train_test_data_generator(full_data, verbose=verbose)
 
     train_list = []
+    print("\n[*] -- train_set")
     for key in full_data.keys():
         print(f"[*] --- {key} : {full_data[key].shape}")
         train_list.append(train_set[key])
@@ -130,9 +133,8 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
     train_df = train_df.sample(frac=1).reset_index(drop=True)
 
     train_label = train_df.pop("Label")
-    train_weights = Reweight(train_df)
+    train_weights = reweight(train_df)
 
-    Reweight(train_df, train_label, train_weights, verbose=verbose)
 
     if verbose > 0:
         print(f"[*] --- sum of weights : {np.sum(train_weights)}")
@@ -174,31 +176,38 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
     train_df.to_csv(train_data_path, index=False)
 
     # Save the label and weight files for the training set
-    np.savetxt(os.path.join(train_label_path), train_label, fmt="%f")
-    np.savetxt(os.path.join(train_weights_path), train_weights, fmt="%f")
+    np.savetxt(os.path.join(train_label_path,"data.labels"),train_label, fmt="%f")
+    np.savetxt(os.path.join(train_weights_path,"data.weights"), train_weights, fmt="%f")
 
     # Create directories to store the label and weight files
     reference_settings_path = os.path.join(output_file_loc, "reference_data", "settings")
     if not os.path.exists(reference_settings_path):
         os.makedirs(reference_settings_path)
 
-    test_data_path = os.path.join(output_file_loc, "input_data", "test", "data")
-    if not os.path.exists(test_data_path):
-        os.makedirs(test_data_path)
+    test_data_loc = os.path.join(output_file_loc, "input_data", "test", "data")
+    if not os.path.exists(test_data_loc):
+        os.makedirs(test_data_loc)
 
     test_settings_path = os.path.join(output_file_loc, "input_data", "test", "settings")
     if not os.path.exists(test_settings_path):
         os.makedirs(test_settings_path)
 
+    print("\n[*] -- test_set")
     for key in test_set.keys():
         print(f"[*] --- {key} : {test_set[key].shape}")
         test_set[key] = test_set[key].round(3)
         if CSV:
-            test_data_path = os.path.join(test_data_path, f"{key}_data.csv")
+            if not os.path.exists(test_data_loc):
+                os.makedirs(test_data_loc)
+            test_data_path = os.path.join(test_data_loc, f"{key}_data.csv")
+
             test_set[key].to_csv(test_data_path, index=False)
 
         if PARQUET:
-            test_data_path = os.path.join(test_data_path, f"{key}_data.parquet")
+            if not os.path.exists(test_data_loc):
+                os.makedirs(test_data_loc)             
+            test_data_path = os.path.join(test_data_loc, f"{key}_data.parquet")
+           
             test_set[key].to_parquet(test_data_path, index=False)
 
     mu = np.random.uniform(0, 3, 10)
