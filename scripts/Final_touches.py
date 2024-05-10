@@ -17,6 +17,7 @@ systematics_path = os.path.join(parent_dir, "HEP-Challenge", "ingestion_program"
 sys.path.append(systematics_path)
 from systematics import Systematics, DER_data, reweight
 from config import LHC_NUMBERS, CSV, PARQUET
+from data_io import zipdir
 
 import argparse
 
@@ -223,6 +224,9 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
     Settings_file_path = os.path.join(test_settings_path, "data.json")
     with open(Settings_file_path, "w") as json_file:
         json.dump(test_settings, json_file, indent=4)
+        
+    zipdir("input_data.zip",os.path.join(output_file_loc, "input_data"))
+    zipdir("reference_data.zip",os.path.join(output_file_loc, "reference_data"))
 
 
 def dataSimulator(n=1000, verbose=0, tes=1.0, mu=1.0):
