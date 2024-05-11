@@ -137,6 +137,7 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
     print("\n[*] -- train_set")
     for key in full_data.keys():
         print(f"[*] --- {key} : {full_data[key].shape}")
+        train_set[key]["detailed_label"] = key
         train_list.append(train_set[key])
 
     train_df = pd.concat(train_list)
@@ -144,7 +145,8 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
 
     train_label = train_df.pop("Label")
     reweighted_data = reweight(train_df)
-    train_process_flags = train_df.pop("Process_flag")
+    train_df.pop("Process_flag")
+    train_detailed_labels = train_df.pop("detailed_label")
     train_weights = reweighted_data["Weight"]
     train_df.pop("Weight")
 
@@ -166,9 +168,9 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
     if not os.path.exists(train_data_path):
         os.makedirs(train_data_path)
 
-    train_process_flag_path = os.path.join(output_file_loc, "input_data", "train", "process_flags")
-    if not os.path.exists(train_process_flag_path):
-        os.makedirs(train_process_flag_path)
+    train_detailed_labels_path = os.path.join(output_file_loc, "input_data", "train", "detailed_labels")
+    if not os.path.exists(train_detailed_labels_path):
+        os.makedirs(train_detailed_labels_path)
 
 
     train_settings_path = os.path.join(output_file_loc, "input_data", "train", "settings")
@@ -197,15 +199,15 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
         train_data_path = os.path.join(train_data_path, "data.parquet")
         train_df.to_parquet(train_data_path, index=False)
 
-    # Save the label, process_flags and weight files for the training set
+    # Save the label, detailed_labels and weight files for the training set
     train_labels_file = os.path.join(train_label_path,"data.labels")
     train_label.to_csv(train_labels_file, index=False, header=False)
         
     train_weights_file = os.path.join(train_weights_path,"data.weights")
     train_weights.to_csv(train_weights_file, index=False, header=False)
     
-    train_process_flags_file = os.path.join(train_process_flag_path,"data.process_flags")
-    train_process_flags.to_csv(train_process_flags_file, index=False, header=False)
+    train_detailed_labels_file = os.path.join(train_detailed_labels_path,"data.detailed_labels")
+    train_detailed_labels.to_csv(train_detailed_labels_file, index=False, header=False)
     
     # Create directories to store the label and weight files
     reference_settings_path = os.path.join(output_file_loc, "reference_data", "settings")
