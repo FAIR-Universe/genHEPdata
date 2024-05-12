@@ -138,6 +138,8 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
     for key in full_data.keys():
         print(f"[*] --- {key} : {full_data[key].shape}")
         train_set[key]["detailed_label"] = key
+        if key == "H":
+            train_set[key]["Label"] = 1
         train_list.append(train_set[key])
 
     train_df = pd.concat(train_list)
