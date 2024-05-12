@@ -2,3 +2,4 @@
 *.out
 *.log
 bin/
+*.zip

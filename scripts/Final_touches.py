@@ -117,7 +117,7 @@ def reweight(process_flag, crosssection_dict=DICT_CROSSSECTION):
     weights = np.zeros(len(process_flag))
     for i in range(len(process_flag)):
         index = process_list.index(process_flag[i])
-        weights[i] = crossection_list[index] / number_of_events[index]        
+        weights[i] = crossection_list[index] * LUMINOCITY / number_of_events[index]        
 
     return weights
 
@@ -160,10 +160,13 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
     train_df = train_df.sample(frac=1).reset_index(drop=True)
 
     train_label = train_df.pop("Label")
-    train_weights = reweight(train_df)
+    train_df["Weight"] = reweight(train_df["Process_flag"])
     train_df.pop("Process_flag")
     train_detailed_labels = train_df.pop("detailed_label")
-    train_df.pop("Weight")
+    train_weights = train_df.pop("Weight")
+
+    if verbose > 0:
+        print(train_df.columns)
 
     if verbose > 0:
         print(f"[*] --- sum of weights : {np.sum(train_weights)}")
