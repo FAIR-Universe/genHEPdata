@@ -16,8 +16,8 @@ write_dir = os.path.join(root_dir, "Data_HEP")
 systematics_path = os.path.join(parent_dir, "HEP-Challenge", "ingestion_program")
 
 sys.path.append(systematics_path)
-from systematics import  DER_data, reweight
-from config import LHC_NUMBERS
+from derived_quantities import  DER_data
+from config import LHC_NUMBERS, DICT_CROSSSECTION, LUMINOCITY
 from data_io import zipdir
 
 import argparse
@@ -107,6 +107,20 @@ def train_test_data_generator(full_data, verbose=0):
     return train_set, test_set
 
 
+def reweight(process_flag, crosssection_dict=DICT_CROSSSECTION):
+    # Temporary fix for the reweighting issue
+
+    crossection_list = crosssection_dict["crosssection"]
+    process_list = crosssection_dict["process_flags"]
+    number_of_events = crosssection_dict["number"]
+
+    weights = np.zeros(len(process_flag))
+    for i in range(len(process_flag)):
+        index = process_list.index(process_flag[i])
+        weights[i] = crossection_list[index] / number_of_events[index]        
+
+    return weights
+
 def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
                   output_file_loc=write_dir,
                   input_format = "csv",
@@ -146,10 +160,9 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
     train_df = train_df.sample(frac=1).reset_index(drop=True)
 
     train_label = train_df.pop("Label")
-    reweighted_data = reweight(train_df)
+    train_weights = reweight(train_df)
     train_df.pop("Process_flag")
     train_detailed_labels = train_df.pop("detailed_label")
-    train_weights = reweighted_data["Weight"]
     train_df.pop("Weight")
 
     if verbose > 0:
