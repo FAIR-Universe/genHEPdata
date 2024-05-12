@@ -56,10 +56,11 @@ void AnalyseEvents(ExRootTreeReader *treeReader, std::string outputFile_part, co
 
     std::string output_filename;
 
-    output_filename = outputFile_part + "_cuthist_" + ".root";
+    output_filename = outputFile_part + "_cuthist.root";
 
     TFile *outfile = new TFile(output_filename.c_str(), "RECREATE");
     TH1 *h_cutflow = new TH1F("cutflow", "Cut flow histogram", 10, 0.0, 10.0);
+    TH1 *process_ID = new TH1F("process_ID", "Process ID", 1000, 0.0, 1000.0);
 
     outputFile_part = outputFile_part + ".csv";
     myfile_part.open(outputFile_part);
@@ -75,6 +76,7 @@ void AnalyseEvents(ExRootTreeReader *treeReader, std::string outputFile_part, co
         // std::cout << "weight : " << event->Weight << std::endl;
 
         h_cutflow->Fill(0);
+        process_ID->Fill(event->ProcessID);
 
         missingET = (MissingET *)branchMissingET->At(0);
         // if(missingET->MET < 20){continue;}

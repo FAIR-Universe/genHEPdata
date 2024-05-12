@@ -58,24 +58,24 @@ def from_csv(data, file_read_loc):
 
 def save_train_data(data_set, file_write_loc, output_format="csv"):
         # Create directories to store the label and weight files
-    train_label_path = os.path.join(file_write_loc, "train", "labels")
+    train_label_path = os.path.join(file_write_loc,"input_data", "train", "labels")
     if not os.path.exists(train_label_path):
         os.makedirs(train_label_path)
 
-    train_weights_path = os.path.join(file_write_loc, "train", "weights")
+    train_weights_path = os.path.join(file_write_loc,"input_data", "train", "weights")
     if not os.path.exists(train_weights_path):
         os.makedirs(train_weights_path)
 
-    train_data_path = os.path.join(file_write_loc, "train", "data")
+    train_data_path = os.path.join(file_write_loc,"input_data", "train", "data")
     if not os.path.exists(train_data_path):
         os.makedirs(train_data_path)
 
-    train_detailed_labels_path = os.path.join(file_write_loc, "train", "detailed_labels")
+    train_detailed_labels_path = os.path.join(file_write_loc,"input_data", "train", "detailed_labels")
     if not os.path.exists(train_detailed_labels_path):
         os.makedirs(train_detailed_labels_path)
 
 
-    train_settings_path = os.path.join(file_write_loc, "train", "settings")
+    train_settings_path = os.path.join(file_write_loc,"input_data", "train", "settings")
     if not os.path.exists(train_settings_path):
         os.makedirs(train_settings_path)
 
@@ -112,11 +112,11 @@ def save_test_data(data_set, file_write_loc, output_format="csv"):
     if not os.path.exists(reference_settings_path):
         os.makedirs(reference_settings_path)
 
-    test_data_loc = os.path.join(file_write_loc, "test", "data")
+    test_data_loc = os.path.join(file_write_loc,"input_data", "test", "data")
     if not os.path.exists(test_data_loc):
         os.makedirs(test_data_loc)
 
-    test_settings_path = os.path.join(file_write_loc, "test", "settings")
+    test_settings_path = os.path.join(file_write_loc,"input_data", "test", "settings")
     if not os.path.exists(test_settings_path):
         os.makedirs(test_settings_path)
 
@@ -256,7 +256,7 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
         print(f"[*] --- sum of signal : {np.sum(train_weights[train_label==1])}")
         print(f"[*] --- sum of background : {np.sum(train_weights[train_label==0])}")
 
-    save_train_data(train_data_set, os.path.join(output_file_loc,"input_data"), output_format)
+    save_train_data(train_data_set, os.path.join(output_file_loc,"challenge_data"), output_format)
 
     for key in test_set.keys():
         print(f"[*] --- {key} : {test_set[key].shape}")
@@ -269,7 +269,7 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
         if verbose > 0 :
             print(test_set[key].columns)
 
-    save_test_data(test_set, os.path.join(output_file_loc, "input_data"), output_format)
+    save_test_data(test_set, os.path.join(output_file_loc, "challenge_data"), output_format)
     
     public_train_set , public_test_set = train_test_data_generator(train_set, verbose=verbose)
     
@@ -314,8 +314,8 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
 
     save_test_data(public_test_set, os.path.join(output_file_loc, "public_data"), output_format)
             
-    zipdir("input_data.zip",os.path.join(output_file_loc, "input_data"))
-    zipdir("reference_data.zip",os.path.join(output_file_loc, "reference_data"))
+    zipdir("input_data.zip",os.path.join(output_file_loc,"challenge_data","input_data"))
+    zipdir("reference_data.zip",os.path.join(output_file_loc, "challenge_data","reference_data"))
     zipdir("public_data.zip",os.path.join(output_file_loc, "public_data"))
 
 
