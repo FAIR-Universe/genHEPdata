@@ -13,15 +13,53 @@ root_dir = os.path.dirname(os.path.realpath(__file__))
 parent_dir = os.path.dirname(root_dir)
 write_dir = os.path.join(root_dir, "Data_HEP")
 
-systematics_path = os.path.join(parent_dir, "HEP-Challenge", "ingestion_program")
+ingestion_path = os.path.join(parent_dir, "HEP-Challenge", "ingestion_program")
 
-sys.path.append(systematics_path)
+sys.path.append(ingestion_path)
 from derived_quantities import  DER_data
 from config import LHC_NUMBERS, DICT_CROSSSECTION, LUMINOCITY
 from data_io import zipdir
 
 import argparse
 
+def from_parquet(data, file_read_loc):
+    for file in os.listdir(file_read_loc):
+        if file.endswith(".parquet"):
+            file_path = os.path.join(file_read_loc, file)
+            key = file.split(".")[0]
+            if key in data:
+                data[key] = pd.read_parquet(file_path)
+            else:
+                print(f"Invalid key: {key}")
+        else:
+            print("No parquet file found")
+            
+
+def from_csv(data, file_read_loc):
+    for file in os.listdir(file_read_loc):
+        if file.endswith(".csv"):
+            file_path = os.path.join(file_read_loc, file)
+            key = file.split(".")[0]
+            if key in data:
+                data[key] = pd.read_csv(file_path)
+            else:
+                print(f"Invalid key: {key}")
+        else:
+            print("No csv file found")
+
+    
+def combine_number_of_events(keys, file_read_loc):
+    number_of_events_df = []    
+    for file in os.listdir(file_read_loc):
+        if file.endswith(".json"):
+            file_path = os.path.join(file_read_loc, file)
+            key = file.split(".")[0]
+            if key in keys:
+                number_of_events_df.append(pd.read_json(file_path))          
+            else:
+                print(f"Invalid key: {key}")
+            
+    return number_of_events_df
 
 # Load the csv file
 def clean_data(data_set):
@@ -44,17 +82,7 @@ def clean_data(data_set):
     return data_set
 
 
-def from_csv(data, file_read_loc):
-    for file in os.listdir(file_read_loc):
-        if file.endswith(".csv"):
-            file_path = os.path.join(file_read_loc, file)
-            key = file.split(".")[0]
-            if key in data:
-                data[key] = pd.read_csv(file_path)
-            else:
-                print(f"Invalid key: {key}")
-        else:
-            print("No csv file found")
+
 
 def save_train_data(data_set, file_write_loc, output_format="csv"):
         # Create directories to store the label and weight files
@@ -150,17 +178,8 @@ def save_test_data(data_set, file_write_loc, output_format="csv"):
     with open(Settings_file_path, "w") as json_file:
         json.dump(test_settings, json_file, indent=4)
 
-def from_parquet(data, file_read_loc):
-    for file in os.listdir(file_read_loc):
-        if file.endswith(".parquet"):
-            file_path = os.path.join(file_read_loc, file)
-            key = file.split(".")[0]
-            if key in data:
-                data[key] = pd.read_parquet(file_path)
-            else:
-                print(f"Invalid key: {key}")
-        else:
-            print("No parquet file found")
+            
+        
 
 
 def train_test_data_generator(full_data, verbose=0):
@@ -205,11 +224,11 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
                   verbose=0):
 
     full_data = {
-        "Z": pd.DataFrame(),
-        "W": pd.DataFrame(),
-        "Diboson": pd.DataFrame(),
-        "TT": pd.DataFrame(),
-        "H": pd.DataFrame(),
+        "ztautau": pd.DataFrame(),
+        "wjets": pd.DataFrame(),
+        "diboson": pd.DataFrame(),
+        "ttbar": pd.DataFrame(),
+        "htautau": pd.DataFrame(),
     }
 
     if input_format == "csv" :
@@ -230,7 +249,7 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
     print("\n[*] -- train_set")
     for key in train_set.keys():
         train_set[key]["detailed_label"] = key
-        if key == "H":
+        if key == "htautau":
             train_set[key]["Label"] = 1
         train_list.append(train_set[key])
         print(f"[*] --- {key} : {train_set[key].shape}")
@@ -239,8 +258,21 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
     train_df = pd.concat(train_list)
     train_df = train_df.sample(frac=1).reset_index(drop=True)
 
+    number_of_events = combine_number_of_events(train_set.keys(), input_file_loc)
+
+    crosssection_dict = DICT_CROSSSECTION
+    
+    generated_number = crosssection_dict["number"]
+    
+    for process in crosssection_dict["process_flags"]:
+        if process in number_of_events:
+            generated_number[process] = number_of_events[process]
+    
+    crosssection_dict["number"] = generated_number
+    
+
     train_label = train_df.pop("Label")
-    train_df["Weight"] = reweight(train_df["Process_flag"])
+    train_df["Weight"] = reweight(train_df["Process_flag"], crosssection_dict)
     train_df.pop("Process_flag")
     train_detailed_labels = train_df.pop("detailed_label")
     train_weights = train_df.pop("Weight")
