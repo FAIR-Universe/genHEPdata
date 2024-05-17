@@ -28,7 +28,7 @@ def from_parquet(data, file_read_loc):
             file_path = os.path.join(file_read_loc, file)
             key = file.split(".")[0]
             if key in data:
-                data[key] = pd.read_parquet(file_path)
+                data[key] = pd.read_parquet(file_path,dtype=np.float32)
             else:
                 print(f"Invalid key: {key}")
         else:
@@ -41,7 +41,7 @@ def from_csv(data, file_read_loc):
             file_path = os.path.join(file_read_loc, file)
             key = file.split(".")[0]
             if key in data:
-                data[key] = pd.read_csv(file_path)
+                data[key] = pd.read_csv(file_path,dtype=np.float32)
             else:
                 print(f"Invalid key: {key}")
         else:
@@ -188,22 +188,26 @@ def train_test_data_generator(full_data, verbose=0):
     # Remove the "label" and "weights" columns from the data    
     test_set = {}
     train_set = {}
-
+    factor_table = {}
     print("\n[*] -- full_data")
     for key in full_data.keys():
         print(f"[*] --- {key} : {full_data[key].shape}")
         try:
+            tempory_number  = int(np.min([full_data[key].shape[0]*0.3, (LHC_NUMBERS[key] * 0.01)]))
             train_set[key], test_set[key] = train_test_split(
-                full_data[key], test_size=int(LHC_NUMBERS[key] * 0.01), random_state=42
+                full_data[key], test_size=int(tempory_number), random_state=42
             )
         except ValueError:
-            print(f"ValueError at {key}, test_size={int(LHC_NUMBERS[key] * 0.01)} and shape={full_data[key].shape}")
+            print(f"ValueError at {key}, test_size={int(LHC_NUMBERS[key] * 0.01)} and shape={full_data[key].shape[0]*0.3}")
+
+            
+        factor_table[key] = train_set[key].shape[0] / full_data[key].shape[0]
             
 
-    return train_set, test_set
+    return train_set, test_set , factor_table
 
 
-def reweight(process_flag, crosssection_dict=DICT_CROSSSECTION):
+def reweight(process_flag, detailed_label, crosssection_dict=DICT_CROSSSECTION, factor_table=None):
     # Temporary fix for the reweighting issue
 
     crossection_list = crosssection_dict["crosssection"]
@@ -213,7 +217,7 @@ def reweight(process_flag, crosssection_dict=DICT_CROSSSECTION):
     weights = np.zeros(len(process_flag))
     for i in range(len(process_flag)):
         index = process_list.index(process_flag[i])
-        weights[i] = crossection_list[index] * LUMINOCITY / number_of_events[index]        
+        weights[i] = ( crossection_list[index] * LUMINOCITY / number_of_events[index] )   / factor_table[detailed_label[i]]
 
     return weights
 
@@ -243,7 +247,7 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
 
     full_data = clean_data(full_data)
 
-    train_set, test_set = train_test_data_generator(full_data, verbose=verbose)
+    train_set, test_set, factor_table_train = train_test_data_generator(full_data, verbose=verbose)
 
     train_list = []
     print("\n[*] -- train_set")
@@ -272,7 +276,7 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
     
 
     train_label = train_df.pop("Label")
-    train_df["Weight"] = reweight(train_df["Process_flag"], crosssection_dict)
+    train_df["Weight"] = reweight(train_df["Process_flag"], train_df["detailed_label"],crosssection_dict, factor_table_train)
     train_df.pop("Process_flag")
     train_detailed_labels = train_df.pop("detailed_label")
     train_weights = train_df.pop("Weight")
@@ -287,6 +291,10 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
         print(f"[*] --- sum of weights : {np.sum(train_weights)}")
         print(f"[*] --- sum of signal : {np.sum(train_weights[train_label==1])}")
         print(f"[*] --- sum of background : {np.sum(train_weights[train_label==0])}")
+        
+        for key in train_set.keys():
+            print(f"[*] --- sum of weights -> {key} : {int(train_weights[train_detailed_labels == key].sum())}")  
+
 
     save_train_data(train_data_set, os.path.join(output_file_loc,"challenge_data"), output_format)
 
@@ -303,7 +311,10 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
 
     save_test_data(test_set, os.path.join(output_file_loc, "challenge_data"), output_format)
     
-    public_train_set , public_test_set = train_test_data_generator(train_set, verbose=verbose)
+    public_train_set , public_test_set , factor_table_public_train = train_test_data_generator(train_set, verbose=verbose)
+    
+    for key in factor_table_public_train.keys():
+        factor_table_public_train[key] = factor_table_public_train[key] * factor_table_train[key]
     
     public_train_list = []
     print("\n[*] -- public_train_set")
@@ -315,7 +326,7 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
     public_train_df = public_train_df.sample(frac=1).reset_index(drop=True)
 
     public_train_label = public_train_df.pop("Label")
-    public_train_df["Weight"] = reweight(public_train_df["Process_flag"])
+    public_train_df["Weight"] = reweight(public_train_df["Process_flag"], public_train_df["detailed_label"],crosssection_dict, factor_table_public_train)
     public_train_df.pop("Process_flag")
     public_train_detailed_labels = public_train_df.pop("detailed_label")
     public_train_weights = public_train_df.pop("Weight")
@@ -337,6 +348,7 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
         print(f"[*] --- {key} : {public_test_set[key].shape}")
         public_test_set[key].pop("Label")
         public_test_set[key].pop("Process_flag")
+        public_test_set[key].pop("detailed_label")
         public_test_set[key].pop("Weight")
         public_test_set[key].round(3)
         
@@ -346,7 +358,7 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
 
     save_test_data(public_test_set, os.path.join(output_file_loc, "public_data"), output_format)
             
-    zipdir("input_data.zip",os.path.join(output_file_loc,"challenge_data","input_data"))
+    zipdir("input_data.zip",os.path.join(output_file_loc, "challenge_data", "input_data"))
     zipdir("reference_data.zip",os.path.join(output_file_loc, "challenge_data","reference_data"))
     zipdir("public_data.zip",os.path.join(output_file_loc, "public_data"))
 

@@ -1,6 +1,5 @@
 
 import json
-import subprocess
 
 
 def process_counter(output_file_name):
