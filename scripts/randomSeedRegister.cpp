@@ -90,7 +90,7 @@ int main(int argc, char *argv[])
         std::cout << "Generated seed: " << seed << std::endl;
         auto seed_str = std::to_string(seed);
 
-        auto command = std::string("sbatch ") + current_file + "run_batch.sh " + seed_str + " " + process + " " + label;
+        auto command = std::string("sbatch ") + current_file + "run_batch.sh " + seed_str + " " + process + " " + label + " &";
 
         system(command.c_str());
 
