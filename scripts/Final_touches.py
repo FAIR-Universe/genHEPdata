@@ -7,20 +7,42 @@ import json
 import pathlib
 
 warnings.filterwarnings("ignore")
-import sys
 
 root_dir = os.path.dirname(os.path.realpath(__file__))
 parent_dir = os.path.dirname(root_dir)
 write_dir = os.path.join(root_dir, "Data_HEP")
 
-ingestion_path = os.path.join(parent_dir, "HEP-Challenge", "ingestion_program")
-
-sys.path.append(ingestion_path)
 from derived_quantities import  DER_data
-from config import LHC_NUMBERS, DICT_CROSSSECTION, LUMINOCITY
-from data_io import zipdir
-
+from contextlib import closing
+from zipfile import ZipFile, ZIP_DEFLATED
 import argparse
+
+LUMINOCITY = 140  # 1/fb
+
+LHC_NUMBERS = {
+    "ztautau": 882563,
+    "wjets": 386311,
+    "diboson": 313218,
+    "ttbar": 88200,
+    "htautau": 2019
+}
+
+# -------------------------------------
+# Zip files
+# -------------------------------------
+def zipdir(archivename, basedir):
+    '''Zip directory, from J.F. Sebastian http://stackoverflow.com/'''
+    assert os.path.isdir(basedir)
+    with closing(ZipFile(archivename, "w", ZIP_DEFLATED)) as z:
+        for root, dirs, files in os.walk(basedir):
+            # NOTE: ignore empty directories
+            for fn in files:
+                if fn[-4:] != '.zip' and fn != '.DS_Store':
+                    absfn = os.path.join(root, fn)
+                    zfn = absfn[len(basedir):]  # XXX: relative path
+                    z.write(absfn, zfn)
+
+
 
 def from_parquet(data, file_read_loc):
     for file in os.listdir(file_read_loc):
@@ -46,23 +68,28 @@ def from_csv(data, file_read_loc):
                 print(f"Invalid key: {key}")
         else:
             print("No csv file found")
-
     
 def combine_number_of_events(keys, file_read_loc):
-    number_of_events_df = []    
+    number_of_events_dict = {}    
     for file in os.listdir(file_read_loc):
         if file.endswith(".json"):
             file_path = os.path.join(file_read_loc, file)
+            
+            print(f"[*] --- file_path : {file_path}")
+            
             key = file.split(".")[0]
             if key in keys:
-                number_of_events_df.append(pd.read_json(file_path))          
+                with open(file_path) as f:
+                    number_of_events = json.load(f)
+                    for key in number_of_events.keys():
+                        number_of_events_dict[key] = number_of_events[key]        
             else:
                 print(f"Invalid key: {key}")
-            
-    return number_of_events_df
+                    
+    return number_of_events_dict
 
 # Load the csv file
-def clean_data(data_set):
+def clean_data(data_set, derived_quantities=True):
     for key in data_set.keys():
         df = data_set[key]
         df = df.drop_duplicates()
@@ -76,7 +103,8 @@ def clean_data(data_set):
         df.pop('Unnamed: 0')
 
         df.sample(frac=1).reset_index(drop=True)
-        df = DER_data(df)
+        if derived_quantities:
+            df = DER_data(df)
         data_set[key] = df
         
     return data_set
@@ -203,28 +231,30 @@ def train_test_data_generator(full_data, verbose=0):
             
         factor_table[key] = train_set[key].shape[0] / full_data[key].shape[0]
             
-
     return train_set, test_set , factor_table
 
 
-def reweight(process_flag, detailed_label, crosssection_dict=DICT_CROSSSECTION, factor_table=None):
+def reweight(process_flag, detailed_label, crosssection_dict,number_of_events, factor_table):
     # Temporary fix for the reweighting issue
-
-    crossection_list = crosssection_dict["crosssection"]
-    process_list = crosssection_dict["process_flags"]
-    number_of_events = crosssection_dict["number"]
-
     weights = np.zeros(len(process_flag))
-    for i in range(len(process_flag)):
-        index = process_list.index(process_flag[i])
-        weights[i] = ( crossection_list[index] * LUMINOCITY / number_of_events[index] )   / factor_table[detailed_label[i]]
+         
+    process_flag = process_flag.astype(int)
 
+    for key in number_of_events.keys():
+        if key in crosssection_dict.keys():
+            for i in range(len(process_flag)):
+                if process_flag[i] == int(key):
+                    weights[i] = ( crosssection_dict[key]["crosssection"] * LUMINOCITY / number_of_events[key] )   / factor_table[detailed_label[i]]
+        else:
+            print(f"[*] --- {key} not found in crosssection_dict")
+                
     return weights
 
 def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
                   output_file_loc=write_dir,
                   input_format = "csv",
                   output_format = "Parquet",
+                  derived_quantities = True,
                   verbose=0):
 
     full_data = {
@@ -245,7 +275,7 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
     else :
         print("Unknown Format")
 
-    full_data = clean_data(full_data)
+    full_data = clean_data(full_data, derived_quantities=derived_quantities)
 
     train_set, test_set, factor_table_train = train_test_data_generator(full_data, verbose=verbose)
 
@@ -261,22 +291,16 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
 
     train_df = pd.concat(train_list)
     train_df = train_df.sample(frac=1).reset_index(drop=True)
+    
 
     number_of_events = combine_number_of_events(train_set.keys(), input_file_loc)
+    
 
-    crosssection_dict = DICT_CROSSSECTION
-    
-    generated_number = crosssection_dict["number"]
-    
-    for process in crosssection_dict["process_flags"]:
-        if process in number_of_events:
-            generated_number[process] = number_of_events[process]
-    
-    crosssection_dict["number"] = generated_number
-    
+    with open("new_crosssection.json") as f:
+        crosssection_dict = json.load(f)
 
     train_label = train_df.pop("Label")
-    train_df["Weight"] = reweight(train_df["Process_flag"], train_df["detailed_label"],crosssection_dict, factor_table_train)
+    train_df["Weight"] = reweight(train_df["Process_flag"], train_df["detailed_label"],crosssection_dict,number_of_events, factor_table_train)
     train_df.pop("Process_flag")
     train_detailed_labels = train_df.pop("detailed_label")
     train_weights = train_df.pop("Weight")
@@ -326,7 +350,7 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
     public_train_df = public_train_df.sample(frac=1).reset_index(drop=True)
 
     public_train_label = public_train_df.pop("Label")
-    public_train_df["Weight"] = reweight(public_train_df["Process_flag"], public_train_df["detailed_label"],crosssection_dict, factor_table_public_train)
+    public_train_df["Weight"] = reweight(public_train_df["Process_flag"], public_train_df["detailed_label"],crosssection_dict,number_of_events, factor_table_public_train)
     public_train_df.pop("Process_flag")
     public_train_detailed_labels = public_train_df.pop("detailed_label")
     public_train_weights = public_train_df.pop("Weight")
@@ -387,10 +411,15 @@ if __name__ == "__main__":
                         help="format of the output file", 
                         choices ={"csv","parquet"} ,
                         default="csv")
+    parser.add_argument("--dervied-quantities", 
+                        "-d", 
+                        help="Add derived quantities to the data",
+                        action="store_true",
+                        default=False)
     
     args = vars(parser.parse_args())
     
     print("root - dir", root_dir)
     print("parent - dir", parent_dir)
 
-    dataGenerator(args["input"],args["output"],args["input_format"],args["output_format"],verbose=1)
+    dataGenerator(args["input"],args["output"],args["input_format"],args["output_format"],args["dervied_quantities"],verbose=1)

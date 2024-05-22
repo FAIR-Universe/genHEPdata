@@ -3,7 +3,7 @@ import os
 import argparse
 import pandas as pd
 from pathlib import Path
-
+import shutil
 
 #!/usr/bin/env python3
 
@@ -52,7 +52,14 @@ class DataPreprocessing:
         for file in os.listdir(file_read_loc):
             if file.endswith(".csv"):
                 file_path = os.path.join(file_read_loc, file)
-                data = pd.read_csv(file_path)
+                try :
+                    data = pd.read_csv(file_path)
+                except:
+                    print(f"Error reading file: {file_path}")
+                    os.remove(file_path)
+                    root_hist_file = file_path.replace(".csv", "_cuthist.root")
+                    os.remove(root_hist_file)
+                    continue
                 data.columns = columns
                 data_frames.append(data)
                 
@@ -120,3 +127,9 @@ if __name__ == "__main__":
         data_preprocessing.to_parquet(merged_file_path)
     else:
         data_preprocessing.to_csv(merged_file_path)
+        
+    for file in os.listdir(file_read_loc):
+        if file.endswith(".json"):
+            file_path = os.path.join(file_read_loc, file)
+            output_file_path = os.path.join(merged_file_path, file)
+            shutil.copy2(file_path, merged_file_path.with_suffix(".json"))

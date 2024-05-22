@@ -1,0 +1,142 @@
+{
+    "111": {
+        "process": "g g -> g g",
+        "crosssection": 2820000.0
+    },
+    "112": {
+        "process": "g g -> q qbar (uds)",
+        "crosssection": 116900.0
+    },
+    "113": {
+        "process": "q g -> q g",
+        "crosssection": 4502000.0
+    },
+    "114": {
+        "process": "q q(bar)' -> q q(bar)'",
+        "crosssection": 1225000.0
+    },
+    "115": {
+        "process": "q qbar -> g g",
+        "crosssection": 18930.0
+    },
+    "116": {
+        "process": "q qbar -> q' qbar' (uds)",
+        "crosssection": 24140.0
+    },
+    "121": {
+        "process": "g g -> c cbar",
+        "crosssection": 22820.0
+    },
+    "122": {
+        "process": "q qbar -> c cbar",
+        "crosssection": 4922.0
+    },
+    "123": {
+        "process": "g g -> b bbar",
+        "crosssection": 23260.0
+    },
+    "124": {
+        "process": "q qbar -> b bbar",
+        "crosssection": 4264.0
+    },
+    "221": {
+        "process": "f fbar -> gamma*/Z0",
+        "crosssection": 1439000.0 
+    },
+    "222": {
+        "process": "f fbar' -> W+-",
+        "crosssection": 141400000.0
+    },
+    "241": {
+        "process": "q qbar -> gamma*/Z0 g",
+        "crosssection": 37880000.0
+    },
+    "242": {
+        "process": "q g-> gamma*/Z0 q",
+        "crosssection": 44230000.0
+    },
+    "243": {
+        "process": "f fbar -> gamma*/Z0 gamma",
+        "crosssection": 348200.0
+    },
+    "244": {
+        "process": "f gamma -> gamma*/Z0 f",
+        "crosssection": 11430.0
+    },
+    "251": {
+        "process": "q qbar' -> W+- g",
+        "crosssection": 93020000.0
+    },
+    "252": {
+        "process": "q g-> W+- q'",
+        "crosssection": 85830000.0
+    },
+    "253": {
+        "process": "f fbar' -> W+- gamma",
+        "crosssection": 541600.0
+    },
+    "254": {
+        "process": "f gamma -> W+- f'",
+        "crosssection": 109700.0
+    },
+    "601": {
+        "process": "g g -> t tbar",
+        "crosssection": 470400.0
+    },
+    "602": {
+        "process": "q qbar -> t tbar",
+        "crosssection": 68040.0
+    },
+    "603": {
+        "process": "q q -> t q (t-channel W+-)",
+        "crosssection": 151100.0
+    },
+    "604": {
+        "process": "f fbar -> t tbar (s-channel gamma*/Z0)",
+        "crosssection": 363.0
+    },
+    "605": {
+        "process": "f fbar -> t qbar (s-channel W+-)",
+        "crosssection": 7160.0
+    },
+    "606": {
+        "process": "gamma gamma -> t tbar",
+        "crosssection": 2.784
+    },
+    "901": {
+        "process": "f fbar -> H (SM)",
+        "crosssection": 57.65
+    },
+    "902": {
+        "process": "g g -> H (SM)",
+        "crosssection": 1634
+    },
+    "903": {
+        "process": "gamma gamma -> H (SM)",
+        "crosssection": 0.0493
+    },
+    "904": {
+        "process": "f fbar -> H0 Z0 (SM)",
+        "crosssection": 38.17
+    },
+    "905": {
+        "process": "f fbar -> H0 W+- (SM)",
+        "crosssection": 69.79
+    },
+    "906": {
+        "process": "f f' -> H0 f f'(Z0 Z0 fusion) (SM)",
+        "crosssection": 60.54
+    },
+    "907": {
+        "process": "f_1 f_2 -> H0 f_3 f_4 (W+ W- fusion) (SM)",
+        "crosssection": 162.7
+    },
+    "908": {
+        "process": "g g -> H t tbar (SM)",
+        "crosssection": 16.09
+    },
+    "3001": {
+        "process": "f fbar -> gamma*/Z0/Zprime0",
+        "crosssection": 694.5
+    }
+}
