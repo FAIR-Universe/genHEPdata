@@ -41,11 +41,23 @@
     },
     "221": {
         "process": "f fbar -> gamma*/Z0",
-        "crosssection": 1439000.0 
+        "crosssection": 6563000.0 
     },
     "222": {
         "process": "f fbar' -> W+-",
         "crosssection": 141400000.0
+    },
+    "231": {
+        "process": "f fbar -> gamma*/Z0 gamma*/Z0",
+        "crosssection": 7192.0
+    },
+    "232": {
+        "process": "f fbar' -> Z0 W+- (no gamma*!)",
+        "crosssection": 25900.0
+    },
+    "233": {
+        "process": "f fbar -> W+ W-",
+        "crosssection": 59810.0
     },
     "241": {
         "process": "q qbar -> gamma*/Z0 g",

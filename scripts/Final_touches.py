@@ -17,14 +17,14 @@ from contextlib import closing
 from zipfile import ZipFile, ZIP_DEFLATED
 import argparse
 
-LUMINOCITY = 140  # 1/fb
+LUMINOCITY = 36  # 1/fb
 
 LHC_NUMBERS = {
-    "ztautau": 882563,
-    "wjets": 386311,
-    "diboson": 313218,
-    "ttbar": 88200,
-    "htautau": 2019
+    "ztautau": 823327,
+    "wjets": 710190,
+    "diboson": 40590,
+    "ttbar": 158761,
+    "htautau": 3639,
 }
 
 # -------------------------------------
@@ -50,11 +50,10 @@ def from_parquet(data, file_read_loc):
             file_path = os.path.join(file_read_loc, file)
             key = file.split(".")[0]
             if key in data:
-                data[key] = pd.read_parquet(file_path,dtype=np.float32)
+                data[key] = pd.read_parquet(file_path, engine="pyarrow")
             else:
                 print(f"Invalid key: {key}")
-        else:
-            print("No parquet file found")
+
             
 
 def from_csv(data, file_read_loc):
@@ -66,8 +65,7 @@ def from_csv(data, file_read_loc):
                 data[key] = pd.read_csv(file_path,dtype=np.float32)
             else:
                 print(f"Invalid key: {key}")
-        else:
-            print("No csv file found")
+
     
 def combine_number_of_events(keys, file_read_loc):
     number_of_events_dict = {}    
@@ -93,6 +91,7 @@ def clean_data(data_set, derived_quantities=True):
     for key in data_set.keys():
         df = data_set[key]
         df = df.drop_duplicates()
+        print(f"[*] --- {key} : {df.shape}")
         df.pop("entry")
         df.pop("PRI_lep_charge")
         df.pop("PRI_had_charge")
@@ -100,12 +99,19 @@ def clean_data(data_set, derived_quantities=True):
         df.pop("PRI_jet_subleading_charge")
         df.pop("PRI_muon_flag")
         df.pop("PRI_electron_flag")
-        df.pop('Unnamed: 0')
-
+        try:
+            df.pop('Unnamed: 0')
+        except:
+            print("No Unnamed: 0 column")
         df.sample(frac=1).reset_index(drop=True)
         if derived_quantities:
             df = DER_data(df)
+            
+        df = df.astype(np.float32)
+
         data_set[key] = df
+        
+        del df
         
     return data_set
 
@@ -221,12 +227,12 @@ def train_test_data_generator(full_data, verbose=0):
     for key in full_data.keys():
         print(f"[*] --- {key} : {full_data[key].shape}")
         try:
-            tempory_number  = int(np.min([full_data[key].shape[0]*0.3, (LHC_NUMBERS[key] * 0.01)]))
+            tempory_number  = int(np.min([full_data[key].shape[0]*0.3, (LHC_NUMBERS[key]*2)]))
             train_set[key], test_set[key] = train_test_split(
                 full_data[key], test_size=int(tempory_number), random_state=42
             )
         except ValueError:
-            print(f"ValueError at {key}, test_size={int(LHC_NUMBERS[key] * 0.01)} and shape={full_data[key].shape[0]*0.3}")
+            print(f"ValueError at {key}, test_size={int(LHC_NUMBERS[key]*2)} and shape={full_data[key].shape[0]*0.3}")
 
             
         factor_table[key] = train_set[key].shape[0] / full_data[key].shape[0]
@@ -274,10 +280,17 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
         from_parquet(full_data,input_file_loc)
     else :
         print("Unknown Format")
+        
+    for key in full_data.keys():
+        print(f"[*] --- {key} : {full_data[key].shape}")
+      
+    
 
     full_data = clean_data(full_data, derived_quantities=derived_quantities)
+        
 
     train_set, test_set, factor_table_train = train_test_data_generator(full_data, verbose=verbose)
+
 
     train_list = []
     print("\n[*] -- train_set")
@@ -299,6 +312,7 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
     with open("new_crosssection.json") as f:
         crosssection_dict = json.load(f)
 
+
     train_label = train_df.pop("Label")
     train_df["Weight"] = reweight(train_df["Process_flag"], train_df["detailed_label"],crosssection_dict,number_of_events, factor_table_train)
     train_df.pop("Process_flag")
@@ -308,8 +322,6 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
     
     train_data_set = {"data": train_df, "labels": train_label, "weights": train_weights, "detailed_labels": train_detailed_labels}
 
-    if verbose > 0:
-        print(train_df.columns)
 
     if verbose > 0:
         print(f"[*] --- sum of weights : {np.sum(train_weights)}")
@@ -319,9 +331,10 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
         for key in train_set.keys():
             print(f"[*] --- sum of weights -> {key} : {int(train_weights[train_detailed_labels == key].sum())}")  
 
-
+    print("\n[*] Saving train data")
     save_train_data(train_data_set, os.path.join(output_file_loc,"challenge_data"), output_format)
 
+    print("\n[*] -- test_set")
     for key in test_set.keys():
         print(f"[*] --- {key} : {test_set[key].shape}")
         test_set[key].pop("Label")
@@ -329,11 +342,10 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
         test_set[key].pop("Weight")
         test_set[key].round(3)
         
-        
-        if verbose > 0 :
-            print(test_set[key].columns)
-
+    print("\n[*] Saving test data")
     save_test_data(test_set, os.path.join(output_file_loc, "challenge_data"), output_format)
+    
+    del train_df, train_label, train_weights, train_detailed_labels, train_data_set, test_set, full_data
     
     public_train_set , public_test_set , factor_table_public_train = train_test_data_generator(train_set, verbose=verbose)
     
@@ -366,8 +378,9 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
         print(f"[*] --- sum of signal : {np.sum(public_train_weights[public_train_label==1])}")
         print(f"[*] --- sum of background : {np.sum(public_train_weights[public_train_label==0])}")
     
+    print("\n[*] Saving public train data")
     save_train_data(public_train_data_set, os.path.join(output_file_loc,"public_data"), output_format)
-    
+    print("\n[*] Saving public test data")
     for key in public_test_set.keys():
         print(f"[*] --- {key} : {public_test_set[key].shape}")
         public_test_set[key].pop("Label")
@@ -422,4 +435,4 @@ if __name__ == "__main__":
     print("root - dir", root_dir)
     print("parent - dir", parent_dir)
 
-    dataGenerator(args["input"],args["output"],args["input_format"],args["output_format"],args["dervied_quantities"],verbose=1)
+    dataGenerator(args["input"],args["output"],args["input_format"],args["output_format"],args["dervied_quantities"],verbose=0)

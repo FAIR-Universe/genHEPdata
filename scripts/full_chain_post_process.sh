@@ -1,14 +1,21 @@
+#!/bin/bash
+#SBATCH --image=rootproject/root:6.28.04-ubuntu22.04
+#SBATCH --account=m4287
+#SBATCH --qos=shared
+#SBATCH --tasks-per-node=1
+#SBATCH --constraint=cpu
+#SBATCH -t 4:00:00
+#SBATCH -J Final_touches
 
 working_dir=/global/cfs/cdirs/m4287/hep
 
-for Process in ttbar wjets ztautau htautau diboson ;
+for Process in ttbar  ztautau  wjets  htautau  diboson ;
 do
 {
 
 input_dir=$working_dir/Delphes_PYTHIA8_output/csv_files_$Process
 rm $input_dir/$Process.root 
 shifter --image=rootproject/root:6.28.04-ubuntu22.04 hadd $input_dir/$Process.root $input_dir/*.root
-
 
 
 shifter --image=rootproject/root:6.28.04-ubuntu22.04 python $working_dir/genHEPdata/scripts/process_counter.py $input_dir/$Process

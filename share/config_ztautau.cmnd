@@ -28,7 +28,7 @@ Check:epTolErr = 1e-2
 ! 4) Process settings
 
 WeakSingleBoson:all = on            ! switch on Single Boson production
-WeakZ0:gmZmode = 0                  ! full gamma*/Z0 structure, with interference included
+WeakZ0:gmZmode = 2                  ! full gamma*/Z0 structure, with interference included
 WeakBosonAndParton:all = off         ! switch on V + jets 
 
 24:onMode = off                     ! turining off W+/- production

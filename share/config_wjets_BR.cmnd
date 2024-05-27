@@ -1,0 +1,41 @@
+! Pythia8 configuration file
+
+! Settings
+Main:timesAllowErrors = 10000          ! Allow more errors to be printed
+
+! Random seed for reproducibility
+Random:setSeed = on
+Random:seed = 12345
+
+
+! Initialize the process: pp -> W+/- 
+WeakSingleBoson:ffbar2W = on           ! Turn on W boson production
+
+! Turn off all W decays
+24:onMode = off
+
+! Enable specific W decays with the desired branching ratios
+24:onIfAny = 11 -11 13 -13 15 -15      ! Allow W to decay to e, mu, and tau
+
+! Manually setting the BRs for specific decays
+24:oneChannel = 1 0.25 0 11 -12        ! W+ -> e+ nu_e (BR = 0.25)
+24:addChannel = 1 0.25 0 -11 12        ! W- -> e- nu_e (BR = 0.25)
+24:addChannel = 1 0.25 0 13 -14        ! W+ -> mu+ nu_mu (BR = 0.25)
+24:addChannel = 1 0.25 0 -13 14        ! W- -> mu- nu_mu (BR = 0.25)
+24:addChannel = 1 0.5 0 15 -16         ! W+ -> tau+ nu_tau (BR = 0.5)
+24:addChannel = 1 0.5 0 -15 16         ! W- -> tau- nu_tau (BR = 0.5)
+
+! Hadronization and other settings
+HadronLevel:all = on                   ! Perform hadronization
+
+! Output settings
+Init:showProcesses = off               ! Do not show detailed process information
+Init:showMultipartonInteractions = off ! Do not show MPI information
+Init:showChangedSettings = off         ! Do not show changed settings
+Init:showAllSettings = off             ! Do not show all settings
+Next:numberCount = 1000                ! Print every 1000th event
+Next:numberShowInfo = 1                ! Show information for the first event
+Next:numberShowProcess = 1             ! Show process for the first event
+Next:numberShowEvent = 1               ! Show the first event
+
+! End of file
