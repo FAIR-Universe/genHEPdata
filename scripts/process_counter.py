@@ -23,5 +23,16 @@ def process_counter(output_file_name):
     
 if __name__ == "__main__":
     import sys
-    process_counter(sys.argv[1])
+    import os
+    import shutil
     
+    file_read_loc = sys.argv[1]
+    merged_file_path = sys.argv[2]
+    process = sys.argv[3]
+        
+    process_counter(file_read_loc + "/" + process)
+    file_path = os.path.join(file_read_loc, process + ".json")
+    
+    merged_file_path = os.path.join(merged_file_path, process + ".json")
+
+    shutil.copy2(file_path, merged_file_path)

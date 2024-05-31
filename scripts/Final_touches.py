@@ -20,8 +20,7 @@ import argparse
 LUMINOCITY = 36  # 1/fb
 
 LHC_NUMBERS = {
-    "ztautau": 823327,
-    "wjets": 710190,
+    "ztautau": 3605618,
     "diboson": 40590,
     "ttbar": 158761,
     "htautau": 3639,
@@ -101,7 +100,7 @@ def clean_data(data_set, derived_quantities=True):
         df.pop("PRI_electron_flag")
         try:
             df.pop('Unnamed: 0')
-        except:
+        except KeyError:
             print("No Unnamed: 0 column")
         df.sample(frac=1).reset_index(drop=True)
         if derived_quantities:
@@ -227,9 +226,9 @@ def train_test_data_generator(full_data, verbose=0):
     for key in full_data.keys():
         print(f"[*] --- {key} : {full_data[key].shape}")
         try:
-            tempory_number  = int(np.min([full_data[key].shape[0]*0.3, (LHC_NUMBERS[key]*2)]))
+            test_number  = (LHC_NUMBERS[key]*2)
             train_set[key], test_set[key] = train_test_split(
-                full_data[key], test_size=int(tempory_number), random_state=42
+                full_data[key], test_size=int(test_number), random_state=42
             )
         except ValueError:
             print(f"ValueError at {key}, test_size={int(LHC_NUMBERS[key]*2)} and shape={full_data[key].shape[0]*0.3}")
@@ -241,19 +240,17 @@ def train_test_data_generator(full_data, verbose=0):
 
 
 def reweight(process_flag, detailed_label, crosssection_dict,number_of_events, factor_table):
-    # Temporary fix for the reweighting issue
     weights = np.zeros(len(process_flag))
-         
     process_flag = process_flag.astype(int)
-
     for key in number_of_events.keys():
-        if key in crosssection_dict.keys():
-            for i in range(len(process_flag)):
-                if process_flag[i] == int(key):
-                    weights[i] = ( crosssection_dict[key]["crosssection"] * LUMINOCITY / number_of_events[key] )   / factor_table[detailed_label[i]]
-        else:
+        try:
+            weight = (crosssection_dict[key]["crosssection"] * LUMINOCITY / number_of_events[key] ) 
+        except KeyError:
             print(f"[*] --- {key} not found in crosssection_dict")
-                
+            continue
+        for i in range(len(process_flag)):
+            if process_flag[i] == int(key):
+                weights[i] = weight / factor_table[detailed_label[i]]
     return weights
 
 def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
@@ -265,7 +262,6 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
 
     full_data = {
         "ztautau": pd.DataFrame(),
-        "wjets": pd.DataFrame(),
         "diboson": pd.DataFrame(),
         "ttbar": pd.DataFrame(),
         "htautau": pd.DataFrame(),
@@ -435,4 +431,4 @@ if __name__ == "__main__":
     print("root - dir", root_dir)
     print("parent - dir", parent_dir)
 
-    dataGenerator(args["input"],args["output"],args["input_format"],args["output_format"],args["dervied_quantities"],verbose=0)
+    dataGenerator(args["input"],args["output"],args["input_format"],args["output_format"],args["dervied_quantities"],verbose=1)

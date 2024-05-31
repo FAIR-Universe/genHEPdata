@@ -128,8 +128,3 @@ if __name__ == "__main__":
     else:
         data_preprocessing.to_csv(merged_file_path)
         
-    for file in os.listdir(file_read_loc):
-        if file.endswith(".json"):
-            file_path = os.path.join(file_read_loc, file)
-            output_file_path = os.path.join(merged_file_path, file)
-            shutil.copy2(file_path, merged_file_path.with_suffix(".json"))
