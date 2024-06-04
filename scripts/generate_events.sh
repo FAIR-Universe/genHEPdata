@@ -1,6 +1,6 @@
 #!/bin/bash
 module load python
-shifter --image=rootproject/root:latest /bin/bash
+shifter --image=rootproject/root:6.28.04-ubuntu22.04 /bin/bash
 export PYTHIA8=/global/cfs/cdirs/m4287/hep/Pythia8
 
 # define the paths

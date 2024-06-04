@@ -3,7 +3,7 @@ Random:setSeed on
 
 ! 1) Settings used in the main program.
 
-Main:numberOfEvents = 100000            ! number of events to generate
+Main:numberOfEvents = 200000            ! number of events to generate
 Main:timesAllowErrors = 300             ! how many aborts before run stops
 
 ! 2) Settings related to output in init(), next() and stat().
@@ -29,8 +29,8 @@ Check:epTolErr = 1e-2
 
 WeakDoubleBoson:all = on             ! switch on Di-Boson production
 WeakZ0:gmZmode = 0                   ! full gamma*/Z0 structure, with interference included
-WeakBosonAndParton:all = on          ! switch on V + jets 
 
 !24:onMode = off                     ! turining off W+/- production
 !23:onMode = off                     ! only allowing Z-> tau tau decay
 !23:onIfMatch = 15 15
+!24:onIfMatch = 15 16

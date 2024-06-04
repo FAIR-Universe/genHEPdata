@@ -28,6 +28,18 @@ void writeRandomSeedToFile(const std::vector<int> &generateSeedList, const std::
     }
 }
 
+// Function to sort a vector
+void sortVector(std::vector<int>& vec)
+{
+    std::sort(vec.begin(), vec.end());
+}
+
+// Function to perform binary search on a sorted vector
+bool binarySearch(const std::vector<int>& vec, int target)
+{
+    return std::binary_search(vec.begin(), vec.end(), target);
+}
+
 int main(int argc, char *argv[])
 {
     if (argc < 4)
@@ -63,11 +75,13 @@ int main(int argc, char *argv[])
         used_seed_list.push_back(used_seed);
     }
 
+    std::sort(used_seed_list.begin(), used_seed_list.end());
+
     int seed_num = 0;
     while (seed_num < max_seed)
     {
         seed = generateSeed();
-        bool is_seed_used = std::find(used_seed_list.begin(), used_seed_list.end(), seed) != used_seed_list.end();
+        bool is_seed_used = std::binary_search(used_seed_list.begin(), used_seed_list.end(), seed);
         if (is_seed_used)
         {
             std::cout << "Seed is already used." << std::endl;
@@ -76,7 +90,7 @@ int main(int argc, char *argv[])
         std::cout << "Generated seed: " << seed << std::endl;
         auto seed_str = std::to_string(seed);
 
-        auto command = std::string("sbatch ") + current_file + "run_batch.sh " + seed_str + " " + process + " " + label;
+        auto command = std::string("sbatch ") + current_file + "run_batch.sh " + seed_str + " " + process + " " + label + " &";
 
         system(command.c_str());
 

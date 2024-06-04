@@ -1,3 +1,6 @@
 ./.vscode/*
 *.out
 *.log
+bin/
+*.zip
+*__pycache__*
