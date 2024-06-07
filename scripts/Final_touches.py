@@ -90,19 +90,24 @@ def clean_data(data_set, derived_quantities=True):
     for key in data_set.keys():
         df = data_set[key]
         df = df.drop_duplicates()
-        print(f"[*] --- {key} : {df.shape}")
-        df.pop("entry")
+        print(f"[*] -#- {key} : {df.shape}")
         df.pop("PRI_lep_charge")
         df.pop("PRI_had_charge")
         df.pop("PRI_jet_leading_charge")
         df.pop("PRI_jet_subleading_charge")
         df.pop("PRI_muon_flag")
         df.pop("PRI_electron_flag")
+
+        df.reset_index(drop=True, inplace=True)
+
+        print(f"[*] -#- {key} : {df.shape}")
+
         try:
             df.pop('Unnamed: 0')
+            df.pop("entry")
+
         except KeyError:
-            print("No Unnamed: 0 column")
-        df.sample(frac=1).reset_index(drop=True)
+            print("No such column")
         if derived_quantities:
             df = DER_data(df)
             
@@ -261,10 +266,11 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
                   verbose=0):
 
     full_data = {
-        "ztautau": pd.DataFrame(),
         "diboson": pd.DataFrame(),
         "ttbar": pd.DataFrame(),
         "htautau": pd.DataFrame(),
+        "ztautau": pd.DataFrame(),
+
     }
 
     if input_format == "csv" :
@@ -276,7 +282,8 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
         from_parquet(full_data,input_file_loc)
     else :
         print("Unknown Format")
-        
+
+    print("full_data :")    
     for key in full_data.keys():
         print(f"[*] --- {key} : {full_data[key].shape}")
       
