@@ -147,6 +147,10 @@
         "process": "g g -> H t tbar (SM)",
         "crosssection": 16.09
     },
+    "909": {
+        "process": "q qbar -> H t tbar (SM)",
+        "crosssection": 6.577
+    },
     "3001": {
         "process": "f fbar -> gamma*/Z0/Zprime0",
         "crosssection": 694.5
