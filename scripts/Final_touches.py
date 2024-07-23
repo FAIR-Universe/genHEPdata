@@ -5,7 +5,7 @@ import os
 import warnings
 import json
 import pathlib
-
+import concurrent.futures
 warnings.filterwarnings("ignore")
 
 root_dir = os.path.dirname(os.path.realpath(__file__))
@@ -16,6 +16,7 @@ from derived_quantities import  DER_data
 from contextlib import closing
 from zipfile import ZipFile, ZIP_DEFLATED
 import argparse
+from multiprocessing import Pool
 
 LUMINOCITY = 36  # 1/fb
 
@@ -23,7 +24,7 @@ LHC_NUMBERS = {
     "ztautau": 3574068,
     "diboson": 13602,
     "ttbar": 159079,
-    "htautau": 3639,
+    "htautau": 3653,
 }
 
 # -------------------------------------
@@ -104,8 +105,6 @@ def clean_data(data_set, derived_quantities=True):
 
         try:
             df.pop('Unnamed: 0')
-            df.pop("entry")
-
         except KeyError:
             print("No Unnamed: 0 column")
 
@@ -265,7 +264,8 @@ def sample_data_generator(full_data, verbose=0):
     test_set = {}
     train_set = {}
     sample_set = {}
-    factor_table = {}
+    factor_table_train = {}
+    factor_table_test = {}
     print("\n[*] -- full_data")
     for key in full_data.keys():
         print(f"[*] --- {key} : {full_data[key].shape}")
@@ -280,20 +280,27 @@ def sample_data_generator(full_data, verbose=0):
             sample_set[key], test_size=int(test_number), random_state=42
         )
             
-        factor_table[key] = train_set[key].shape[0] / full_data[key].shape[0]
-            
+        factor_table_train[key] = train_set[key].shape[0] / full_data[key].shape[0]
+        factor_table_test[key] = test_set[key].shape[0] / full_data[key].shape[0]
+
+        factor_table = (factor_table_train, factor_table_test)            
     return train_set, test_set , factor_table
 
-def reweight(process_flag, detailed_label, crosssection_dict,number_of_events, factor_table):
+def reweight(process_flag, detailed_label, crosssection_dict,number_of_events,factor_table):
+    process_flag = np.array(process_flag)
+    detailed_label = np.array(detailed_label)
     weights = np.zeros(len(process_flag))
+    print(f"[*] --- detailed_label shape : {detailed_label.shape}")
+    print(f"[*] --- process_flag shape : {process_flag.shape}")
+    print(f"[*] --- weights shape : {weights.shape}")
     process_flag = process_flag.astype(int)
     for key in number_of_events.keys():
         try:
             weight = (crosssection_dict[key]["crosssection"] * LUMINOCITY / number_of_events[key] ) 
         except KeyError:
             print(f"[*] --- {key} not found in crosssection_dict")
-            raise KeyError
-            
+            weight = -1
+
         for i in range(len(process_flag)):
             if process_flag[i] == int(key):
                 weights[i] = weight / factor_table[detailed_label[i]]
@@ -337,30 +344,52 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
 
     factor_table_train, factor_table_test = factor_table
 
-
-    train_list = []
-    print("\n[*] -- train_set")
-    for key in train_set.keys():
-        train_set[key]["detailed_label"] = key
-        if key == "htautau":
-            train_set[key]["Label"] = 1
-        train_list.append(train_set[key])
-        print(f"[*] --- {key} : {train_set[key].shape}")
-
-
-    train_df = pd.concat(train_list)
-    train_df = train_df.sample(frac=1).reset_index(drop=True)
+    number_of_events = combine_number_of_events(full_data.keys(), input_file_loc)
     
-
-    number_of_events = combine_number_of_events(train_set.keys(), input_file_loc)
-    
-
     with open("new_crosssection.json") as f:
         crosssection_dict = json.load(f)
 
+    print("\n[*] -- test_set")
+    def process_test_set(key):
+        print(f"[*] --- {key} : {test_set[key].shape}")
+        test_set[key]["detailed_label"] = key
+        test_weights = reweight(test_set[key]["Process_flag"], test_set[key]["detailed_label"] ,crosssection_dict,number_of_events, factor_table_test)    
+        test_set[key].pop("Label")
+        test_set[key].pop("Process_flag")
+        test_set[key].pop("detailed_label")
+        test_set[key].pop("Weight")
+        test_set[key].round(3)
+        test_set[key]["weights"] = test_weights
+        test_set[key].drop( test_set[key][ test_weights < 0 ].index , inplace=True)
+        test_set[key].reset_index(drop=True, inplace=True)
+        print(f"[*] --- {key} : {test_set[key].shape}")
+        print(f"[*] --- {key} : {test_weights.sum()}")
+
+
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        list(executor.map(process_test_set, test_set.keys()))
+
+    
+
+    train_list = []
+    print("\n[*] -- train_set")
+    def process_train_set(key):
+        train_set[key]["detailed_label"] = key
+        if key == "htautau":
+            train_set[key]["Label"] = 1
+        train_set[key]["Weight"] = reweight(train_set[key]["Process_flag"], train_set[key]["detailed_label"],crosssection_dict,number_of_events, factor_table_train)
+        train_list.append(train_set[key])
+        print(f"[*] --- {key} : {train_set[key].shape}")
+        print(f"[*] --- {key} : {train_set[key]['Weight'].sum()}")
+
+    train_list = []
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        list(executor.map(process_train_set, train_set.keys()))
+
+    train_df = pd.concat(train_list)
+    train_df = train_df.sample(frac=1).reset_index(drop=True)
 
     train_label = train_df.pop("Label")
-    train_df["Weight"] = reweight(train_df["Process_flag"], train_df["detailed_label"],crosssection_dict,number_of_events, factor_table_train)
     train_df.pop("Process_flag")
     train_detailed_labels = train_df.pop("detailed_label")
     train_weights = train_df.pop("Weight")
@@ -379,18 +408,6 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
 
     print("\n[*] Saving train data")
     save_train_data(train_data_set, os.path.join(output_file_loc,"challenge_data"), output_format)
-
-
-    print("\n[*] -- test_set")
-    for key in test_set.keys():
-        print(f"[*] --- {key} : {test_set[key].shape}")
-        detailed_label = [ key for _ in range(test_set[key].shape[0])]
-        test_weights = reweight(test_set[key]["Process_flag"], detailed_label ,crosssection_dict,number_of_events, factor_table_test)    
-        test_set[key].pop("Label")
-        test_set[key].pop("Process_flag")
-        test_set[key].pop("Weight")
-        test_set[key].round(3)
-        test_set[key]["weights"] = test_weights
         
     print("\n[*] Saving test data")
     save_test_data(test_set, os.path.join(output_file_loc, "challenge_data"), output_format)
@@ -407,15 +424,18 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
     
     public_train_list = []
     print("\n[*] -- public_train_set")
-    for key in public_train_set.keys():
+    def process_public_train_set(key):
         print(f"[*] --- {key} : {public_train_set[key].shape}")
         public_train_list.append(public_train_set[key])
+        public_train_set[key]["Weight"] = reweight(public_train_set[key]["Process_flag"], public_train_set[key]["detailed_label"] ,crosssection_dict,number_of_events, factor_table_public_train)
+        print(f"[*] --- {key} : {public_train_set[key]['Weight'].sum()}")
+
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        list(executor.map(process_public_train_set, public_train_set.keys()))
 
     public_train_df = pd.concat(public_train_list)
     public_train_df = public_train_df.sample(frac=1).reset_index(drop=True)
-
     public_train_label = public_train_df.pop("Label")
-    public_train_df["Weight"] = reweight(public_train_df["Process_flag"], public_train_df["detailed_label"],crosssection_dict,number_of_events, factor_table_public_train)
     public_train_df.pop("Process_flag")
     public_train_detailed_labels = public_train_df.pop("detailed_label")
     public_train_weights = public_train_df.pop("Weight")
@@ -434,10 +454,10 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
     print("\n[*] Saving public train data")
     save_train_data(public_train_data_set, os.path.join(output_file_loc,"public_data"), output_format)
     print("\n[*] Saving public test data")
-    for key in public_test_set.keys():
+    def process_public_test_set(key):
         print(f"[*] --- {key} : {public_test_set[key].shape}")
-        detailed_labels = [ key for _ in range(public_test_set[key].shape[0])]
-        public_test_weights = reweight(public_test_set[key]["Process_flag"], detailed_labels ,crosssection_dict,number_of_events, factor_table_public_test)    
+        public_test_set[key]["detailed_label"] = key 
+        public_test_weights = reweight(public_test_set[key]["Process_flag"], public_test_set[key]["detailed_label"] ,crosssection_dict,number_of_events, factor_table_public_test)    
         public_test_set[key].pop("Label")
         public_test_set[key].pop("Process_flag")
         public_test_set[key].pop("detailed_label")
@@ -445,12 +465,10 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
         public_test_set[key].round(3)
         public_test_set[key]["weights"] = public_test_weights
         
-        
-        if verbose > 0 :
-            print(public_test_set[key].columns)
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        list(executor.map(process_public_test_set, public_test_set.keys()))
 
     save_test_data(public_test_set, os.path.join(output_file_loc, "public_data"), output_format)
-
 
     sample_train_set, sample_test_set, factor_table_sample = sample_data_generator(train_set, verbose=verbose)
 
@@ -490,9 +508,8 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
     print("\n[*] Saving sample test data")
     for key in sample_test_set.keys():
         print(f"[*] --- {key} : {sample_test_set[key].shape}")
-
-        detailed_labels = [ key for _ in range(sample_test_set[key].shape[0])]
-        sample_test_weights = reweight(sample_test_set[key]["Process_flag"], detailed_labels ,crosssection_dict,number_of_events, factor_table_sample_test)
+        sample_test_set[key]["detailed_label"] = key
+        sample_test_weights = reweight(sample_test_set[key]["Process_flag"], sample_test_set[key]["detailed_label"] ,crosssection_dict,number_of_events, factor_table_sample_test)
         sample_test_set[key].pop("Label")
         sample_test_set[key].pop("Process_flag")
         sample_test_set[key].pop("detailed_label")
