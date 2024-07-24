@@ -27,4 +27,4 @@ shifter --image=rootproject/root:6.28.04-ubuntu22.04 python $working_dir/genHEPd
 }
 done
 
-shifter --image=nersc/fair_universe:1298f0a8 python3 Final_touches.py -i $merged_dir -o /global/cfs/cdirs/m4287/hep/Delphes_PYTHIA8_output --input-format "parquet" --output-format "parquet" --dervied-quantities
+shifter --image=nersc/fair_universe:1298f0a8 python3 Final_touches.py -i $merged_dir -o /global/cfs/cdirs/m4287/hep/Delphes_PYTHIA8_output --input-format "parquet" --output-format "parquet" --derived-quantities

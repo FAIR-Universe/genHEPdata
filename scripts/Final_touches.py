@@ -67,8 +67,9 @@ def from_csv(data, file_read_loc):
                 print(f"Invalid key: {key}")
 
     
-def combine_number_of_events(keys, file_read_loc):
-    number_of_events_dict = {}    
+def combine_number_of_events(keys, file_read_loc, crosssection_dict):
+    number_of_events_dict = {}
+    weights_dict = {}    
     for file in os.listdir(file_read_loc):
         if file.endswith(".json"):
             file_path = os.path.join(file_read_loc, file)
@@ -83,8 +84,18 @@ def combine_number_of_events(keys, file_read_loc):
                         number_of_events_dict[key] = number_of_events[key]        
             else:
                 print(f"Invalid key: {key}")
-                    
-    return number_of_events_dict
+                
+    for key in number_of_events_dict.keys():
+        try:
+            weights_dict[key] = (crosssection_dict[key]["crosssection"] * LUMINOCITY / number_of_events_dict[key] )
+        
+        except KeyError:
+            print(f"[*] --- {key} not found in crosssection_dict")
+            weights_dict[key] = -1
+    
+    # weight_dict = {int(key): weights_dict[key] for key in weights_dict.keys()}
+                   
+    return number_of_events_dict, weights_dict
 
 # Load the csv file
 def clean_data(data_set, derived_quantities=True):
@@ -286,32 +297,23 @@ def sample_data_generator(full_data, verbose=0):
         factor_table = (factor_table_train, factor_table_test)            
     return train_set, test_set , factor_table
 
-def reweight(process_flag, detailed_label, crosssection_dict,number_of_events,factor_table):
+def reweight(process_flag,weight_table,factor):
     process_flag = np.array(process_flag)
-    detailed_label = np.array(detailed_label)
     weights = np.zeros(len(process_flag))
-    print(f"[*] --- detailed_label shape : {detailed_label.shape}")
     print(f"[*] --- process_flag shape : {process_flag.shape}")
-    print(f"[*] --- weights shape : {weights.shape}")
     process_flag = process_flag.astype(int)
-    for key in number_of_events.keys():
-        try:
-            weight = (crosssection_dict[key]["crosssection"] * LUMINOCITY / number_of_events[key] ) 
-        except KeyError:
-            print(f"[*] --- {key} not found in crosssection_dict")
-            weight = -1
-
-        for i in range(len(process_flag)):
-            if process_flag[i] == int(key):
-                weights[i] = weight / factor_table[detailed_label[i]]
+    for key in weight_table.keys():
+        weights[process_flag == int(key)] = weight_table[key] / factor
     return weights
+
 
 def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
                   output_file_loc=write_dir,
                   input_format = "csv",
                   output_format = "Parquet",
                   derived_quantities = True,
-                  verbose=0):
+                  verbose=0,
+                  concurrent_processing = False):
 
     full_data = {
         "diboson": pd.DataFrame(),
@@ -344,19 +346,18 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
 
     factor_table_train, factor_table_test = factor_table
 
-    number_of_events = combine_number_of_events(full_data.keys(), input_file_loc)
-    
     with open("new_crosssection.json") as f:
         crosssection_dict = json.load(f)
 
+    number_of_events, weight_table = combine_number_of_events(full_data.keys(), input_file_loc, crosssection_dict)
+    
+    
     print("\n[*] -- test_set")
     def process_test_set(key):
         print(f"[*] --- {key} : {test_set[key].shape}")
-        test_set[key]["detailed_label"] = key
-        test_weights = reweight(test_set[key]["Process_flag"], test_set[key]["detailed_label"] ,crosssection_dict,number_of_events, factor_table_test)    
+        test_weights = reweight(test_set[key]["Process_flag"], weight_table, factor_table_test[key]) 
         test_set[key].pop("Label")
         test_set[key].pop("Process_flag")
-        test_set[key].pop("detailed_label")
         test_set[key].pop("Weight")
         test_set[key].round(3)
         test_set[key]["weights"] = test_weights
@@ -366,10 +367,14 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
         print(f"[*] --- {key} : {test_weights.sum()}")
 
 
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        list(executor.map(process_test_set, test_set.keys()))
+    if concurrent_processing:
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            list(executor.map(process_test_set, test_set.keys()))
+    else:
+        for key in test_set.keys():
+            process_test_set(key)
 
-    
+
 
     train_list = []
     print("\n[*] -- train_set")
@@ -377,7 +382,7 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
         train_set[key]["detailed_label"] = key
         if key == "htautau":
             train_set[key]["Label"] = 1
-        train_set[key]["Weight"] = reweight(train_set[key]["Process_flag"], train_set[key]["detailed_label"],crosssection_dict,number_of_events, factor_table_train)
+        train_set[key]["Weight"] = reweight(train_set[key]["Process_flag"], weight_table, factor_table_train[key])
         train_list.append(train_set[key])
         print(f"[*] --- {key} : {train_set[key].shape}")
         print(f"[*] --- {key} : {train_set[key]['Weight'].sum()}")
@@ -427,11 +432,15 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
     def process_public_train_set(key):
         print(f"[*] --- {key} : {public_train_set[key].shape}")
         public_train_list.append(public_train_set[key])
-        public_train_set[key]["Weight"] = reweight(public_train_set[key]["Process_flag"], public_train_set[key]["detailed_label"] ,crosssection_dict,number_of_events, factor_table_public_train)
+        public_train_set[key]["Weight"] = reweight(public_train_set[key]["Process_flag"], weight_table, factor_table_public_train[key])
         print(f"[*] --- {key} : {public_train_set[key]['Weight'].sum()}")
 
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        list(executor.map(process_public_train_set, public_train_set.keys()))
+    if concurrent_processing:
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            list(executor.map(process_public_train_set, public_train_set.keys()))
+    else:
+        for key in public_train_set.keys():
+            process_public_train_set(key)
 
     public_train_df = pd.concat(public_train_list)
     public_train_df = public_train_df.sample(frac=1).reset_index(drop=True)
@@ -456,17 +465,19 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
     print("\n[*] Saving public test data")
     def process_public_test_set(key):
         print(f"[*] --- {key} : {public_test_set[key].shape}")
-        public_test_set[key]["detailed_label"] = key 
-        public_test_weights = reweight(public_test_set[key]["Process_flag"], public_test_set[key]["detailed_label"] ,crosssection_dict,number_of_events, factor_table_public_test)    
+        public_test_weights = reweight(public_test_set[key]["Process_flag"], weight_table, factor_table_public_test[key])    
         public_test_set[key].pop("Label")
         public_test_set[key].pop("Process_flag")
-        public_test_set[key].pop("detailed_label")
         public_test_set[key].pop("Weight")
         public_test_set[key].round(3)
         public_test_set[key]["weights"] = public_test_weights
-        
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        list(executor.map(process_public_test_set, public_test_set.keys()))
+
+    if concurrent_processing:
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            list(executor.map(process_public_test_set, public_test_set.keys()))
+    else:   
+        for key in public_test_set.keys():
+            process_public_test_set(key)
 
     save_test_data(public_test_set, os.path.join(output_file_loc, "public_data"), output_format)
 
@@ -486,7 +497,7 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
     sample_train_df = pd.concat(sample_train_list)
     sample_train_df = sample_train_df.sample(frac=1).reset_index(drop=True)
     sample_train_label = sample_train_df.pop("Label")
-    sample_train_df["Weight"] = reweight(sample_train_df["Process_flag"], sample_train_df["detailed_label"],crosssection_dict,number_of_events, factor_table_sample_train)
+    sample_train_df["Weight"] = reweight(sample_train_df["Process_flag"], weight_table, factor_table_sample_train[key])
     sample_train_df.pop("Process_flag")
     sample_train_detailed_labels = sample_train_df.pop("detailed_label")
     sample_train_weights = sample_train_df.pop("Weight")
@@ -508,11 +519,9 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
     print("\n[*] Saving sample test data")
     for key in sample_test_set.keys():
         print(f"[*] --- {key} : {sample_test_set[key].shape}")
-        sample_test_set[key]["detailed_label"] = key
-        sample_test_weights = reweight(sample_test_set[key]["Process_flag"], sample_test_set[key]["detailed_label"] ,crosssection_dict,number_of_events, factor_table_sample_test)
+        sample_test_weights = reweight(sample_test_set[key]["Process_flag"], weight_table, factor_table_sample_test[key])
         sample_test_set[key].pop("Label")
         sample_test_set[key].pop("Process_flag")
-        sample_test_set[key].pop("detailed_label")
         sample_test_set[key].pop("Weight")
         sample_test_set[key].round(3)
         sample_test_set[key]["weights"] = sample_test_weights
@@ -560,10 +569,15 @@ if __name__ == "__main__":
                         help="Add derived quantities to the data",
                         action="store_true",
                         default=False)
+    parser.add_argument("--parallel", 
+                        "-p",
+                        help="Use parallel processing",
+                        action="store_true",
+                        default=False)
     
     args = vars(parser.parse_args())
     
     print("root - dir", root_dir)
     print("parent - dir", parent_dir)
 
-    dataGenerator(args["input"],args["output"],args["input_format"],args["output_format"],args["derived_quantities"],verbose=1)
+    dataGenerator(args["input"],args["output"],args["input_format"],args["output_format"],args["derived_quantities"],verbose=1,concurrent_processing=args["parallel"])
