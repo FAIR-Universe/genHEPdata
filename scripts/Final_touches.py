@@ -241,27 +241,50 @@ def save_test_data(data_set, file_write_loc, output_format="csv"):
         json.dump(test_settings, json_file, indent=4)
 
 
-def train_test_data_generator(full_data, factor=2):
+def train_test_data_generator(full_data, factor=2, test_factor=2, train_factor = 8):
 
 
     # Remove the "label" and "weights" columns from the data    
     test_set = {}
     train_set = {}
+    sample_set = {}
     factor_table = {}
     factor_table_train = {}
     factor_table_test = {}
     print("\n[*] -- full_data")
     for key in full_data.keys():
-        print(f"[*] --- {key} : {full_data[key].shape}")
-        try:
-            test_number  = (LHC_NUMBERS[key]*factor)
+        
+        if key == "htautau":
+            print(f"[*] --- {key} : {full_data[key].shape}")
+            
+            test_number  = (LHC_NUMBERS[key] * test_factor)
             train_set[key], test_set[key] = train_test_split(
                 full_data[key], test_size=int(test_number), random_state=42
-            )
-        except ValueError:
-            print(f"ValueError at {key}, test_size={int(LHC_NUMBERS[key]*factor)} and shape={full_data[key].shape[0]}")
-
+            )            
+        
+        else :
             
+            print(f"[*] --- {key} : {full_data[key].shape}")
+
+            try:
+                test_number  = (LHC_NUMBERS[key] * test_factor) - 1
+                train_number = (LHC_NUMBERS[key] * train_factor) - 1
+                sample_set[key] , test_set[key] = train_test_split(
+                    full_data[key], test_size=int(test_number), random_state=42
+                )
+                
+                _ , train_set[key] = train_test_split(sample_set[key], test_size=int(train_number), random_state=42)
+                
+                
+            except ValueError as e:
+                print(f"ValueError at {key}, full shape={full_data[key].shape[0]}")
+                print(f"ValueError at {key}, sample shape={sample_set[key].shape[0]}")
+                print(f"ValueError at {key}, test shape={test_number}")
+                print(f"ValueError at {key}, train shape={train_number}")
+                
+                raise e
+
+                
         factor_table_train[key] = train_set[key].shape[0] / full_data[key].shape[0]
         factor_table_test[key] = test_set[key].shape[0] / full_data[key].shape[0]
 
@@ -340,7 +363,7 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
     full_data = clean_data(full_data, derived_quantities=derived_quantities)
         
 
-    train_set, test_set, factor_table = train_test_data_generator(full_data, factor=test_factor)
+    train_set, test_set, factor_table = train_test_data_generator(full_data,  test_factor = test_factor, train_factor = 9)
 
     factor_table_train, factor_table_test = factor_table
 
@@ -422,7 +445,7 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
     
     del train_df, train_label, train_weights, train_detailed_labels, train_data_set, test_set, full_data
     
-    public_train_set , public_test_set , factor_table_public = train_test_data_generator(train_set, factor=5)
+    public_train_set , public_test_set , factor_table_public = train_test_data_generator(train_set, test_factor = 4, train_factor = 5)
 
     factor_table_public_train, factor_table_public_test = factor_table_public
     
@@ -596,6 +619,7 @@ if __name__ == "__main__":
                     output_format = args["output_format"],
                     derived_quantities = args["derived_quantities"],
                     concurrent_processing=args["parallel"],
+                    verbose=1,
                     test_factor = args["test_factor"])
     
     end_time = time.time()
