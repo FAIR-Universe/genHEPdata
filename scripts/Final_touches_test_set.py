@@ -7,6 +7,7 @@ import json
 import pathlib
 import concurrent.futures
 warnings.filterwarnings("ignore")
+import time
 
 root_dir = os.path.dirname(os.path.realpath(__file__))
 parent_dir = os.path.dirname(root_dir)
@@ -67,8 +68,9 @@ def from_csv(data, file_read_loc):
                 print(f"Invalid key: {key}")
 
     
-def combine_number_of_events(keys, file_read_loc):
-    number_of_events_dict = {}    
+def generate_weight_table(keys, file_read_loc, crosssection_dict):
+    number_of_events_dict = {}
+    weights_dict = {}    
     for file in os.listdir(file_read_loc):
         if file.endswith(".json"):
             file_path = os.path.join(file_read_loc, file)
@@ -83,8 +85,16 @@ def combine_number_of_events(keys, file_read_loc):
                         number_of_events_dict[key] = number_of_events[key]        
             else:
                 print(f"Invalid key: {key}")
-                    
-    return number_of_events_dict
+                
+    for key in number_of_events_dict.keys():
+        try:
+            weights_dict[key] = (crosssection_dict[key]["crosssection"] * LUMINOCITY / number_of_events_dict[key] )
+        
+        except KeyError:
+            print(f"[*] --- {key} not found in crosssection_dict")
+            weights_dict[key] = -1
+                       
+    return weights_dict
 
 # Load the csv file
 def clean_data(data_set, derived_quantities=True):
@@ -195,25 +205,15 @@ def test_data_generator(full_data, test_factor = 2):
 
     return test_set , factor_table
 
-def reweight(process_flag, detailed_label, crosssection_dict,number_of_events,factor_table):
+def reweight(process_flag,weight_table,factor):
     process_flag = np.array(process_flag)
-    detailed_label = np.array(detailed_label)
     weights = np.zeros(len(process_flag))
-    print(f"[*] --- detailed_label shape : {detailed_label.shape}")
     print(f"[*] --- process_flag shape : {process_flag.shape}")
-    print(f"[*] --- weights shape : {weights.shape}")
     process_flag = process_flag.astype(int)
-    for key in number_of_events.keys():
-        try:
-            weight = (crosssection_dict[key]["crosssection"] * LUMINOCITY / number_of_events[key] ) 
-        except KeyError:
-            print(f"[*] --- {key} not found in crosssection_dict")
-            weight = -1
-
-        for i in range(len(process_flag)):
-            if process_flag[i] == int(key):
-                weights[i] = weight / factor_table[detailed_label[i]]
+    for key in weight_table.keys():
+        weights[process_flag == int(key)] = weight_table[key] / factor
     return weights
+
 
 def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
                   output_file_loc=write_dir,
@@ -243,27 +243,24 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
     print("full_data :")    
     for key in full_data.keys():
         print(f"[*] --- {key} : {full_data[key].shape}")
-      
-    
+          
 
     full_data = clean_data(full_data, derived_quantities=derived_quantities)
         
 
     test_set, factor_table_test = test_data_generator(full_data, test_factor=test_factor)
 
-    number_of_events = combine_number_of_events(full_data.keys(), input_file_loc)
-    
     with open("new_crosssection.json") as f:
         crosssection_dict = json.load(f)
 
+    weight_table = generate_weight_table(full_data.keys(), input_file_loc, crosssection_dict)
+    
     print("\n[*] -- test_set")
     def process_test_set(key):
         print(f"[*] --- {key} : {test_set[key].shape}")
-        test_set[key]["detailed_label"] = key
-        test_weights = reweight(test_set[key]["Process_flag"], test_set[key]["detailed_label"] ,crosssection_dict,number_of_events, factor_table_test)    
+        test_weights = reweight(test_set[key]["Process_flag"], weight_table, factor_table_test[key]) 
         test_set[key].pop("Label")
         test_set[key].pop("Process_flag")
-        test_set[key].pop("detailed_label")
         test_set[key].pop("Weight")
         test_set[key].round(3)
         test_set[key]["weights"] = test_weights
@@ -281,8 +278,10 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
     save_test_data(test_set, output_file_loc, output_format)
     
     del test_set, full_data
+    
+    date = time.strftime("%Y%m%d")
             
-    zipdir("test_data.zip",os.path.join(output_file_loc,""))
+    zipdir(f"test_data_{date}.zip",os.path.join(output_file_loc,""))
     print("\n[*] --- Done")
 
 
@@ -326,9 +325,15 @@ if __name__ == "__main__":
     print("[*] Input file location  :", args["input"])
     print("[*] Output file location :", args["output"])
 
+    start_time = time.time()
+
     dataGenerator(input_file_loc = args["input"],
                     output_file_loc = args["output"],
                     input_format = args["input_format"],
                     output_format = args["output_format"],
                     derived_quantities = args["derived_quantities"],
                     test_factor = args["test_factor"])
+    
+    end_time = time.time()
+    
+    print(f"[*] --- Time taken : {end_time - start_time} seconds")

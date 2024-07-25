@@ -7,6 +7,7 @@ import json
 import pathlib
 import concurrent.futures
 warnings.filterwarnings("ignore")
+import time
 
 root_dir = os.path.dirname(os.path.realpath(__file__))
 parent_dir = os.path.dirname(root_dir)
@@ -67,7 +68,7 @@ def from_csv(data, file_read_loc):
                 print(f"Invalid key: {key}")
 
     
-def combine_number_of_events(keys, file_read_loc, crosssection_dict):
+def generate_weight_table(keys, file_read_loc, crosssection_dict):
     number_of_events_dict = {}
     weights_dict = {}    
     for file in os.listdir(file_read_loc):
@@ -92,10 +93,8 @@ def combine_number_of_events(keys, file_read_loc, crosssection_dict):
         except KeyError:
             print(f"[*] --- {key} not found in crosssection_dict")
             weights_dict[key] = -1
-    
-    # weight_dict = {int(key): weights_dict[key] for key in weights_dict.keys()}
-                   
-    return number_of_events_dict, weights_dict
+                       
+    return weights_dict
 
 # Load the csv file
 def clean_data(data_set, derived_quantities=True):
@@ -242,7 +241,7 @@ def save_test_data(data_set, file_write_loc, output_format="csv"):
         json.dump(test_settings, json_file, indent=4)
 
 
-def train_test_data_generator(full_data, verbose=0):
+def train_test_data_generator(full_data, factor=2):
 
 
     # Remove the "label" and "weights" columns from the data    
@@ -255,12 +254,12 @@ def train_test_data_generator(full_data, verbose=0):
     for key in full_data.keys():
         print(f"[*] --- {key} : {full_data[key].shape}")
         try:
-            test_number  = (LHC_NUMBERS[key]*2)
+            test_number  = (LHC_NUMBERS[key]*factor)
             train_set[key], test_set[key] = train_test_split(
                 full_data[key], test_size=int(test_number), random_state=42
             )
         except ValueError:
-            print(f"ValueError at {key}, test_size={int(LHC_NUMBERS[key]*2)} and shape={full_data[key].shape[0]*0.3}")
+            print(f"ValueError at {key}, test_size={int(LHC_NUMBERS[key]*factor)} and shape={full_data[key].shape[0]}")
 
             
         factor_table_train[key] = train_set[key].shape[0] / full_data[key].shape[0]
@@ -269,7 +268,7 @@ def train_test_data_generator(full_data, verbose=0):
         factor_table = (factor_table_train, factor_table_test)            
     return train_set, test_set , factor_table
 
-def sample_data_generator(full_data, verbose=0):
+def sample_data_generator(full_data, Full_size=0.3, Test_size=0.3):
 
     # Remove the "label" and "weights" columns from the data    
     test_set = {}
@@ -281,12 +280,12 @@ def sample_data_generator(full_data, verbose=0):
     for key in full_data.keys():
         print(f"[*] --- {key} : {full_data[key].shape}")
 
-        full_number  = (LHC_NUMBERS[key]) * 0.3
+        full_number  = (LHC_NUMBERS[key]) * Full_size
         _ , sample_set[key] = train_test_split(
             full_data[key], test_size=int(full_number), random_state=42
         )
 
-        test_number  = (full_number*0.3)
+        test_number  = (full_number * Test_size)
         train_set[key], test_set[key] = train_test_split(
             sample_set[key], test_size=int(test_number), random_state=42
         )
@@ -313,7 +312,8 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
                   output_format = "Parquet",
                   derived_quantities = True,
                   verbose=0,
-                  concurrent_processing = False):
+                  concurrent_processing = False,
+                  test_factor = 2):
 
     full_data = {
         "diboson": pd.DataFrame(),
@@ -337,19 +337,17 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
     for key in full_data.keys():
         print(f"[*] --- {key} : {full_data[key].shape}")
       
-    
-
     full_data = clean_data(full_data, derived_quantities=derived_quantities)
         
 
-    train_set, test_set, factor_table = train_test_data_generator(full_data, verbose=verbose)
+    train_set, test_set, factor_table = train_test_data_generator(full_data, factor=test_factor)
 
     factor_table_train, factor_table_test = factor_table
 
     with open("new_crosssection.json") as f:
         crosssection_dict = json.load(f)
 
-    number_of_events, weight_table = combine_number_of_events(full_data.keys(), input_file_loc, crosssection_dict)
+    weight_table = generate_weight_table(full_data.keys(), input_file_loc, crosssection_dict)
     
     
     print("\n[*] -- test_set")
@@ -388,8 +386,13 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
         print(f"[*] --- {key} : {train_set[key]['Weight'].sum()}")
 
     train_list = []
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        list(executor.map(process_train_set, train_set.keys()))
+    
+    if concurrent_processing:
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            list(executor.map(process_train_set, train_set.keys()))
+    else:
+        for key in train_set.keys():
+            process_train_set(key)
 
     train_df = pd.concat(train_list)
     train_df = train_df.sample(frac=1).reset_index(drop=True)
@@ -419,7 +422,7 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
     
     del train_df, train_label, train_weights, train_detailed_labels, train_data_set, test_set, full_data
     
-    public_train_set , public_test_set , factor_table_public = train_test_data_generator(train_set, verbose=verbose)
+    public_train_set , public_test_set , factor_table_public = train_test_data_generator(train_set, factor=5)
 
     factor_table_public_train, factor_table_public_test = factor_table_public
     
@@ -481,8 +484,7 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
 
     save_test_data(public_test_set, os.path.join(output_file_loc, "public_data"), output_format)
 
-    sample_train_set, sample_test_set, factor_table_sample = sample_data_generator(train_set, verbose=verbose)
-
+    sample_train_set, sample_test_set, factor_table_sample = sample_data_generator(train_set, Full_size=0.3, Test_size=0.3)
     factor_table_sample_train, factor_table_sample_test = factor_table_sample
 
     for key in factor_table_sample_train.keys():
@@ -532,12 +534,13 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
 
     save_test_data(sample_test_set, os.path.join(output_file_loc, "sample_data"), output_format)
 
-            
-    zipdir("input_data.zip",os.path.join(output_file_loc, "challenge_data", "input_data"))
-    zipdir("reference_data.zip",os.path.join(output_file_loc, "challenge_data","reference_data"))
-    zipdir("public_data.zip",os.path.join(output_file_loc, "public_data"))
-    zipdir("sample_input_data.zip",os.path.join(output_file_loc, "sample_data", "input_data"))
-    zipdir("sample_reference_data.zip",os.path.join(output_file_loc, "sample_data", "reference_data"))
+    date = time.strftime("%d_%m_%Y")
+                
+    zipdir(f"input_data_{date}.zip",os.path.join(output_file_loc, "challenge_data", "input_data"))
+    zipdir(f"reference_data_{date}.zip",os.path.join(output_file_loc, "challenge_data","reference_data"))
+    zipdir(f"public_data_{date}.zip",os.path.join(output_file_loc, "public_data"))
+    zipdir(f"sample_input_data_{date}.zip",os.path.join(output_file_loc, "sample_data", "input_data"))
+    zipdir(f"sample_reference_data_{date}.zip",os.path.join(output_file_loc, "sample_data", "reference_data"))
 
 
 if __name__ == "__main__":
@@ -574,10 +577,29 @@ if __name__ == "__main__":
                         help="Use parallel processing",
                         action="store_true",
                         default=False)
-    
+    parser.add_argument("--test-factor", 
+                        "-t", 
+                        help="Factor to multiply the test data",
+                        type=int,
+                        default=2)   
+     
     args = vars(parser.parse_args())
     
     print("root - dir", root_dir)
     print("parent - dir", parent_dir)
+    
+    start_time = time.time()
 
-    dataGenerator(args["input"],args["output"],args["input_format"],args["output_format"],args["derived_quantities"],verbose=1,concurrent_processing=args["parallel"])
+    dataGenerator(input_file_loc = args["input"],
+                    output_file_loc = args["output"],
+                    input_format = args["input_format"],
+                    output_format = args["output_format"],
+                    derived_quantities = args["derived_quantities"],
+                    concurrent_processing=args["parallel"],
+                    test_factor = args["test_factor"])
+    
+    end_time = time.time()
+    
+    print(f"[*] --- Time taken : {end_time - start_time} seconds")
+    
+    
