@@ -22,10 +22,10 @@ from multiprocessing import Pool
 LUMINOCITY = 36  # 1/fb
 
 LHC_NUMBERS = {
-    "ztautau": 3574068,
-    "diboson": 13602,
-    "ttbar": 159079,
-    "htautau": 3653,
+    "ztautau": 3582130,
+    "diboson": 13613,
+    "ttbar": 159011,
+    "htautau": 3654,
 }
 
 # -------------------------------------
@@ -241,19 +241,16 @@ def save_test_data(data_set, file_write_loc, output_format="csv"):
         json.dump(test_settings, json_file, indent=4)
 
 
-def train_test_data_generator(full_data, factor=2, test_factor=2, train_factor = 8):
+def train_test_data_generator(full_data, test_factor=2, train_factor = 8):
 
 
     # Remove the "label" and "weights" columns from the data    
     test_set = {}
     train_set = {}
     sample_set = {}
-    factor_table = {}
-    factor_table_train = {}
-    factor_table_test = {}
     print("\n[*] -- full_data")
     for key in full_data.keys():
-        
+                
         if key == "htautau":
             print(f"[*] --- {key} : {full_data[key].shape}")
             
@@ -283,13 +280,8 @@ def train_test_data_generator(full_data, factor=2, test_factor=2, train_factor =
                 print(f"ValueError at {key}, train shape={train_number}")
                 
                 raise e
-
-                
-        factor_table_train[key] = train_set[key].shape[0] / full_data[key].shape[0]
-        factor_table_test[key] = test_set[key].shape[0] / full_data[key].shape[0]
-
-        factor_table = (factor_table_train, factor_table_test)            
-    return train_set, test_set , factor_table
+           
+    return train_set, test_set
 
 def sample_data_generator(full_data, Full_size=0.3, Test_size=0.3):
 
@@ -297,12 +289,10 @@ def sample_data_generator(full_data, Full_size=0.3, Test_size=0.3):
     test_set = {}
     train_set = {}
     sample_set = {}
-    factor_table_train = {}
-    factor_table_test = {}
     print("\n[*] -- full_data")
     for key in full_data.keys():
         print(f"[*] --- {key} : {full_data[key].shape}")
-
+        
         full_number  = (LHC_NUMBERS[key]) * Full_size
         _ , sample_set[key] = train_test_split(
             full_data[key], test_size=int(full_number), random_state=42
@@ -312,22 +302,24 @@ def sample_data_generator(full_data, Full_size=0.3, Test_size=0.3):
         train_set[key], test_set[key] = train_test_split(
             sample_set[key], test_size=int(test_number), random_state=42
         )
-            
-        factor_table_train[key] = train_set[key].shape[0] / full_data[key].shape[0]
-        factor_table_test[key] = test_set[key].shape[0] / full_data[key].shape[0]
+                              
+    return train_set, test_set 
 
-        factor_table = (factor_table_train, factor_table_test)            
-    return train_set, test_set , factor_table
-
-def reweight(process_flag,weight_table,factor):
+def weighting(process_flag,weight_table):
     process_flag = np.array(process_flag)
     weights = np.zeros(len(process_flag))
     print(f"[*] --- process_flag shape : {process_flag.shape}")
     process_flag = process_flag.astype(int)
     for key in weight_table.keys():
-        weights[process_flag == int(key)] = weight_table[key] / factor
+        weights[process_flag == int(key)] = weight_table[key]
     return weights
 
+def reweight(weights, sum_weights_full):
+    weights = np.array(weights)
+    sum_weights = np.sum(weights) 
+    weights = weights * sum_weights_full / sum_weights 
+    
+    return weights
 
 def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
                   output_file_loc=write_dir,
@@ -361,22 +353,25 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
         print(f"[*] --- {key} : {full_data[key].shape}")
       
     full_data = clean_data(full_data, derived_quantities=derived_quantities)
-        
-
-    train_set, test_set, factor_table = train_test_data_generator(full_data,  test_factor = test_factor, train_factor = 9)
-
-    factor_table_train, factor_table_test = factor_table
 
     with open("new_crosssection.json") as f:
         crosssection_dict = json.load(f)
 
     weight_table = generate_weight_table(full_data.keys(), input_file_loc, crosssection_dict)
-    
+
+    for key in full_data.keys():
+        print(f"[*] Weighting {key}")
+        print(f"[*] --- {key} : {full_data[key].shape}")
+        full_set_weights = weighting(full_data[key]["Process_flag"], weight_table)
+        full_data[key]["Weight"] = full_set_weights
+        print(f"[*] --- {key} : {full_data[key]['Weight'].sum()}")
+
+    train_set, test_set = train_test_data_generator(full_data,  test_factor = test_factor, train_factor = 11)
     
     print("\n[*] -- test_set")
     def process_test_set(key):
         print(f"[*] --- {key} : {test_set[key].shape}")
-        test_weights = reweight(test_set[key]["Process_flag"], weight_table, factor_table_test[key]) 
+        test_weights = reweight(test_set[key]["Weight"], full_data[key]["Weight"].sum())
         test_set[key].pop("Label")
         test_set[key].pop("Process_flag")
         test_set[key].pop("Weight")
@@ -403,7 +398,7 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
         train_set[key]["detailed_label"] = key
         if key == "htautau":
             train_set[key]["Label"] = 1
-        train_set[key]["Weight"] = reweight(train_set[key]["Process_flag"], weight_table, factor_table_train[key])
+        train_set[key]["Weight"] = reweight(train_set[key]["Weight"], full_data[key]["Weight"].sum())
         train_list.append(train_set[key])
         print(f"[*] --- {key} : {train_set[key].shape}")
         print(f"[*] --- {key} : {train_set[key]['Weight'].sum()}")
@@ -445,20 +440,15 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
     
     del train_df, train_label, train_weights, train_detailed_labels, train_data_set, test_set, full_data
     
-    public_train_set , public_test_set , factor_table_public = train_test_data_generator(train_set, test_factor = 4, train_factor = 5)
+    public_train_set , public_test_set  = train_test_data_generator(train_set, test_factor = 5, train_factor = 6)
 
-    factor_table_public_train, factor_table_public_test = factor_table_public
-    
-    for key in factor_table_public_train.keys():
-        factor_table_public_train[key] = factor_table_public_train[key] * factor_table_train[key]
-        factor_table_public_test[key] = factor_table_public_test[key] * factor_table_train[key]
     
     public_train_list = []
     print("\n[*] -- public_train_set")
     def process_public_train_set(key):
         print(f"[*] --- {key} : {public_train_set[key].shape}")
+        public_train_set[key]["Weight"] = reweight(public_train_set[key]["Weight"], train_set[key]["Weight"].sum())
         public_train_list.append(public_train_set[key])
-        public_train_set[key]["Weight"] = reweight(public_train_set[key]["Process_flag"], weight_table, factor_table_public_train[key])
         print(f"[*] --- {key} : {public_train_set[key]['Weight'].sum()}")
 
     if concurrent_processing:
@@ -491,13 +481,15 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
     print("\n[*] Saving public test data")
     def process_public_test_set(key):
         print(f"[*] --- {key} : {public_test_set[key].shape}")
-        public_test_weights = reweight(public_test_set[key]["Process_flag"], weight_table, factor_table_public_test[key])    
+        public_test_weights = reweight(public_test_set[key]["Weight"], train_set[key]["Weight"].sum())    
         public_test_set[key].pop("Label")
         public_test_set[key].pop("Process_flag")
+        public_test_set[key].pop("detailed_label")
         public_test_set[key].pop("Weight")
         public_test_set[key].round(3)
         public_test_set[key]["weights"] = public_test_weights
-
+        print(f"[*] --- {key} : {public_test_set[key]['weights'].sum()}")
+        
     if concurrent_processing:
         with concurrent.futures.ThreadPoolExecutor() as executor:
             list(executor.map(process_public_test_set, public_test_set.keys()))
@@ -507,22 +499,19 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
 
     save_test_data(public_test_set, os.path.join(output_file_loc, "public_data"), output_format)
 
-    sample_train_set, sample_test_set, factor_table_sample = sample_data_generator(train_set, Full_size=0.3, Test_size=0.3)
-    factor_table_sample_train, factor_table_sample_test = factor_table_sample
-
-    for key in factor_table_sample_train.keys():
-        factor_table_sample_train[key] = factor_table_sample_train[key] * factor_table_public_train[key]
+    sample_train_set, sample_test_set = sample_data_generator(train_set, Full_size=0.3, Test_size=0.3)
 
     sample_train_list = []
     print("\n[*] -- sample_train_set")
     for key in sample_train_set.keys():
         print(f"[*] --- {key} : {sample_train_set[key].shape}")
+        sample_train_set[key]["Weight"] = reweight(sample_train_set[key]["Weight"], train_set[key]["Weight"].sum())
         sample_train_list.append(sample_train_set[key])
+        print(f"[*] --- {key} : {sample_train_set[key]['Weight'].sum()}")
 
     sample_train_df = pd.concat(sample_train_list)
     sample_train_df = sample_train_df.sample(frac=1).reset_index(drop=True)
     sample_train_label = sample_train_df.pop("Label")
-    sample_train_df["Weight"] = reweight(sample_train_df["Process_flag"], weight_table, factor_table_sample_train[key])
     sample_train_df.pop("Process_flag")
     sample_train_detailed_labels = sample_train_df.pop("detailed_label")
     sample_train_weights = sample_train_df.pop("Weight")
@@ -544,12 +533,14 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
     print("\n[*] Saving sample test data")
     for key in sample_test_set.keys():
         print(f"[*] --- {key} : {sample_test_set[key].shape}")
-        sample_test_weights = reweight(sample_test_set[key]["Process_flag"], weight_table, factor_table_sample_test[key])
+        sample_test_weights = reweight(sample_test_set[key]["Weight"], train_set[key]["Weight"].sum())
         sample_test_set[key].pop("Label")
         sample_test_set[key].pop("Process_flag")
+        sample_test_set[key].pop("detailed_label")
         sample_test_set[key].pop("Weight")
         sample_test_set[key].round(3)
         sample_test_set[key]["weights"] = sample_test_weights
+        print(f"[*] --- {key} : {sample_test_set[key]['weights'].sum()}")
         
         if verbose > 0 :
             print(sample_test_set[key].columns)
