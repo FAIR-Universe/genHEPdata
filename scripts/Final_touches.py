@@ -17,7 +17,6 @@ from derived_quantities import  DER_data
 from contextlib import closing
 from zipfile import ZipFile, ZIP_DEFLATED
 import argparse
-from multiprocessing import Pool
 
 LUMINOCITY = 36  # 1/fb
 
@@ -145,7 +144,6 @@ def clean_data(data_set, derived_quantities=True):
         
     return data_set
 
-
 def save_train_data(data_set, file_write_loc, output_format="csv"):
         # Create directories to store the label and weight files
     train_label_path = os.path.join(file_write_loc,"input_data", "train", "labels")
@@ -169,7 +167,15 @@ def save_train_data(data_set, file_write_loc, output_format="csv"):
     if not os.path.exists(train_settings_path):
         os.makedirs(train_settings_path)
 
-    train_settings = {"tes": 1.0, "jes" : 1.0,"soft_met" :1.0, "w_scale": 1.0,"bkg_scale" : 1.0 ,"ground_truth_mu": 1.0}
+    train_settings = {
+        "tes": 1.0,
+        "jes": 1.0,
+        "soft_met": 0.0,
+        "ttbar_scale": 1.0,
+        "diboson_scale": 1.0,
+        "bkg_scale": 1.0,
+        "ground_truth_mu": 1.0,
+    }    
     # Specify the file path
     Settings_file_path = os.path.join(train_settings_path, "data.json")
 
@@ -328,7 +334,9 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
                   derived_quantities = True,
                   verbose=0,
                   concurrent_processing = False,
-                  test_factor = 2):
+                  test_factor = 2,
+                  public_train_factor = 8,
+                  public_test_factor = 2):
 
     full_data = {
         "diboson": pd.DataFrame(),
@@ -353,6 +361,7 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
         print(f"[*] --- {key} : {full_data[key].shape}")
       
     full_data = clean_data(full_data, derived_quantities=derived_quantities)
+    
 
     with open("new_crosssection.json") as f:
         crosssection_dict = json.load(f)
@@ -366,7 +375,8 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
         full_data[key]["Weight"] = full_set_weights
         print(f"[*] --- {key} : {full_data[key]['Weight'].sum()}")
 
-    train_set, test_set = train_test_data_generator(full_data,  test_factor = test_factor, train_factor = 11)
+    public_factor = public_train_factor + public_test_factor
+    train_set, test_set = train_test_data_generator(full_data,  test_factor = test_factor, train_factor = public_factor)
     
     print("\n[*] -- test_set")
     def process_test_set(key):
@@ -440,7 +450,7 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
     
     del train_df, train_label, train_weights, train_detailed_labels, train_data_set, test_set, full_data
     
-    public_train_set , public_test_set  = train_test_data_generator(train_set, test_factor = 5, train_factor = 6)
+    public_train_set , public_test_set  = train_test_data_generator(train_set, test_factor = public_test_factor, train_factor = public_train_factor)
 
     
     public_train_list = []
@@ -572,11 +582,13 @@ if __name__ == "__main__":
                         help="Output file location",
                         )
     parser.add_argument("--input-format", 
+                        "-I",
                         type=str,
                         help="format of the input file",
                         choices ={"csv","parquet"} ,
                         default="csv")
     parser.add_argument("--output-format",
+                        "-O",
                         type=str,
                         help="format of the output file", 
                         choices ={"csv","parquet"} ,
@@ -595,7 +607,17 @@ if __name__ == "__main__":
                         "-t", 
                         help="Factor to multiply the test data",
                         type=int,
-                        default=2)   
+                        default=2)
+    parser.add_argument("--public-train-factor",
+                        "-P", 
+                        help="Factor to multiply the public train data",
+                        type=int,
+                        default=5)
+    parser.add_argument("--public-test-factor",
+                        "-T",
+                        help="Factor to multiply the public test data",
+                        type=int,
+                        default=5)  
      
     args = vars(parser.parse_args())
     
@@ -611,7 +633,10 @@ if __name__ == "__main__":
                     derived_quantities = args["derived_quantities"],
                     concurrent_processing=args["parallel"],
                     verbose=1,
-                    test_factor = args["test_factor"])
+                    test_factor = args["test_factor"],
+                    public_train_factor = args["public_train_factor"],
+                    public_test_factor = args["public_test_factor"]
+                    )
     
     end_time = time.time()
     
