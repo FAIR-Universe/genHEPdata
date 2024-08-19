@@ -174,46 +174,65 @@ void AnalyseEvents(ExRootTreeReader *treeReader, std::string outputFile_part, co
 
         n_jet = 0;
 
-        std::array<double, 3> charge_jet = {0.0, 0.0, 0.0};
-        std::array<double, 3> pt_jet = {0.0, 0.0, 0.0};
-        std::array<double, 3> eta_jet = {0.0, 0.0, 0.0};
-        std::array<double, 3> phi_jet = {0.0, 0.0, 0.0};
-        std::array<TLorentzVector, 3> p_jet;
+        std::array<double, 2> pt_jet = {-7.0, -7.0};
+        std::array<double, 2> eta_jet = {-7.0, -7.0};
+        std::array<double, 2> phi_jet = {-7.0, -7.0};
+        std::array<double, 2> charge_jet = {-7.0, -7.0};
+        std::array<TLorentzVector, 2> p_jet;
 
+        std::size_t i_leading_jet = -1;
+        std::size_t i_subleading_jet = -1;
+        double pt_leading_jet = -1;
+        double pt_subleading_jet = -1;
         double jet_all_pt = 0;
+
         for (i = 0; i < branchJet->GetEntriesFast(); ++i)
         {
             auto jet = (Jet *)branchJet->At(i);
-            if (jet->PT < 20.0)
+            double ptj = jet->PT;
+            if (ptj < 20.0)
+            {
+                continue;
+            }
+            if (jet->TauTag == 1)
             {
                 continue;
             }
             n_jet++;
-            jet_all_pt += jet->PT;
+            jet_all_pt += ptj;
 
-            for (int j = 0; j < 3; j++)
+            if (ptj > pt_leading_jet)
             {
-                if (jet->PT > pt_jet[j])
-                {
-                    for (int k = 2; k > j; k--)
-                    {
-                        pt_jet[k] = pt_jet[k - 1];
-                        eta_jet[k] = eta_jet[k - 1];
-                        phi_jet[k] = phi_jet[k - 1];
-                        charge_jet[k] = charge_jet[k - 1];
-                        p_jet[k] = p_jet[k - 1];
-                    }
-
-                    pt_jet[j] = jet->PT;
-                    eta_jet[j] = jet->Eta;
-                    phi_jet[j] = jet->Phi;
-                    charge_jet[j] = jet->Charge;
-                    p_jet[j] = jet->P4();
-                    break;
-                }
+                i_subleading_jet = i_leading_jet;
+                pt_subleading_jet = pt_leading_jet;
+                i_leading_jet = i;
+                pt_leading_jet = ptj;
+            }
+            else if (ptj > pt_subleading_jet)
+            {
+                i_subleading_jet = i;
+                pt_subleading_jet = ptj;
             }
         }
-
+        
+        if (i_leading_jet >= 0)
+        {
+            auto jet = (Jet *)branchJet->At(i_leading_jet);
+            pt_jet[0] = jet->PT;
+            eta_jet[0] = jet->Eta;
+            phi_jet[0] = jet->Phi;
+            charge_jet[0] = jet->Charge;
+            p_jet[0] = jet->P4();
+        }
+        if (i_subleading_jet >= 0)
+        {
+            auto jet = (Jet *)branchJet->At(i_subleading_jet);
+            pt_jet[1] = jet->PT;
+            eta_jet[1] = jet->Eta;
+            phi_jet[1] = jet->Phi;
+            charge_jet[1] = jet->Charge;
+            p_jet[1] = jet->P4();
+        }
         if (n_jet < 2)
         {
             pt_jet[1] = eta_jet[1] = phi_jet[1] = charge_jet[1] = -7;
