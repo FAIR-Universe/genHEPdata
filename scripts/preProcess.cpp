@@ -180,15 +180,19 @@ void AnalyseEvents(ExRootTreeReader *treeReader, std::string outputFile_part, co
         std::array<double, 2> charge_jet = {-7.0, -7.0};
         std::array<TLorentzVector, 2> p_jet;
 
-        std::size_t i_leading_jet = -1;
-        std::size_t i_subleading_jet = -1;
-        double pt_leading_jet = -1;
-        double pt_subleading_jet = -1;
+        int i_leading_jet = -1;
+        int i_subleading_jet = -1;
+        double pt_leading_jet = -7;
+        double pt_subleading_jet = -7;
         double jet_all_pt = 0;
 
         for (i = 0; i < branchJet->GetEntriesFast(); ++i)
         {
             auto jet = (Jet *)branchJet->At(i);
+            if (!jet) {
+                std::cerr << "Error: Jet is null at index " << i << std::endl;
+                continue;
+            }
             double ptj = jet->PT;
             if (ptj < 20.0)
             {
@@ -214,9 +218,9 @@ void AnalyseEvents(ExRootTreeReader *treeReader, std::string outputFile_part, co
                 pt_subleading_jet = ptj;
             }
         }
-        
+
         if (i_leading_jet >= 0)
-        {
+        {   
             auto jet = (Jet *)branchJet->At(i_leading_jet);
             pt_jet[0] = jet->PT;
             eta_jet[0] = jet->Eta;
@@ -226,6 +230,7 @@ void AnalyseEvents(ExRootTreeReader *treeReader, std::string outputFile_part, co
         }
         if (i_subleading_jet >= 0)
         {
+            
             auto jet = (Jet *)branchJet->At(i_subleading_jet);
             pt_jet[1] = jet->PT;
             eta_jet[1] = jet->Eta;
