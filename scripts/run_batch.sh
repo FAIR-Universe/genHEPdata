@@ -12,7 +12,7 @@ process=$2
 label=$3
 export WorkDir=/global/cfs/cdirs/m4287/hep/genHEPdata
 
-srun -n 100 -c 2 bash -c "
+srun -n 128 -c 2 bash -c "
     seed=\$((${main_seed}*100 + \$SLURM_PROCID))
     $WorkDir/scripts/run_generator.sh \${seed} ${process} ${label}
 "
