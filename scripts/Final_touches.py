@@ -18,14 +18,6 @@ from contextlib import closing
 from zipfile import ZipFile, ZIP_DEFLATED
 import argparse
 
-LUMINOCITY = 36  # 1/fb
-
-LHC_NUMBERS = {
-    "ztautau": 3582130,
-    "diboson": 13613,
-    "ttbar": 159011,
-    "htautau": 3654,
-}
 
 # -------------------------------------
 # Zip files
@@ -67,7 +59,7 @@ def from_csv(data, file_read_loc):
                 print(f"Invalid key: {key}")
 
     
-def generate_weight_table(keys, file_read_loc, crosssection_dict):
+def generate_weight_table(keys, file_read_loc, crosssection_dict,luminocity):
     number_of_events_dict = {}
     weights_dict = {}    
     for file in os.listdir(file_read_loc):
@@ -87,7 +79,7 @@ def generate_weight_table(keys, file_read_loc, crosssection_dict):
                 
     for key in number_of_events_dict.keys():
         try:
-            weights_dict[key] = (crosssection_dict[key]["crosssection"] * LUMINOCITY / number_of_events_dict[key] )
+            weights_dict[key] = (crosssection_dict[key]["crosssection"] * luminocity / number_of_events_dict[key] )
         
         except KeyError:
             print(f"[*] --- {key} not found in crosssection_dict")
@@ -256,11 +248,11 @@ def train_test_data_generator(full_data, test_factor=2, train_factor = 8):
     sample_set = {}
     print("\n[*] -- full_data")
     for key in full_data.keys():
-                
+        lhc_numbers = int(np.sum(full_data[key]["Weight"]))
+      
         if key == "htautau":
             print(f"[*] --- {key} : {full_data[key].shape}")
-            
-            test_number  = (LHC_NUMBERS[key] * test_factor)
+            test_number  = (lhc_numbers * test_factor)
             train_set[key], test_set[key] = train_test_split(
                 full_data[key], test_size=int(test_number), random_state=42
             )            
@@ -270,8 +262,8 @@ def train_test_data_generator(full_data, test_factor=2, train_factor = 8):
             print(f"[*] --- {key} : {full_data[key].shape}")
 
             try:
-                test_number  = (LHC_NUMBERS[key] * test_factor) - 1
-                train_number = (LHC_NUMBERS[key] * train_factor) - 1
+                test_number  = (lhc_numbers * test_factor) - 1
+                train_number = (lhc_numbers * train_factor) - 1
                 sample_set[key] , test_set[key] = train_test_split(
                     full_data[key], test_size=int(test_number), random_state=42
                 )
@@ -298,8 +290,8 @@ def sample_data_generator(full_data, Full_size=0.3, Test_size=0.3):
     print("\n[*] -- full_data")
     for key in full_data.keys():
         print(f"[*] --- {key} : {full_data[key].shape}")
-        
-        full_number  = (LHC_NUMBERS[key]) * Full_size
+        lhc_numbers = int(np.sum(full_data[key]["Weight"]))
+        full_number  = (lhc_numbers) * Full_size
         _ , sample_set[key] = train_test_split(
             full_data[key], test_size=int(full_number), random_state=42
         )
@@ -336,7 +328,8 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
                   concurrent_processing = False,
                   test_factor = 2,
                   public_train_factor = 8,
-                  public_test_factor = 2):
+                  public_test_factor = 2,
+                  luminosity = 36):
 
     full_data = {
         "diboson": pd.DataFrame(),
@@ -366,7 +359,7 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
     with open("new_crosssection.json") as f:
         crosssection_dict = json.load(f)
 
-    weight_table = generate_weight_table(full_data.keys(), input_file_loc, crosssection_dict)
+    weight_table = generate_weight_table(full_data.keys(), input_file_loc, crosssection_dict, luminosity)
 
     for key in full_data.keys():
         print(f"[*] Weighting {key}")
@@ -401,19 +394,14 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
             process_test_set(key)
 
 
-
-    train_list = []
     print("\n[*] -- train_set")
     def process_train_set(key):
         train_set[key]["detailed_label"] = key
         if key == "htautau":
             train_set[key]["Label"] = 1
         train_set[key]["Weight"] = reweight(train_set[key]["Weight"], full_data[key]["Weight"].sum())
-        train_list.append(train_set[key])
         print(f"[*] --- {key} : {train_set[key].shape}")
         print(f"[*] --- {key} : {train_set[key]['Weight'].sum()}")
-
-    train_list = []
     
     if concurrent_processing:
         with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -421,34 +409,11 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
     else:
         for key in train_set.keys():
             process_train_set(key)
-
-    train_df = pd.concat(train_list)
-    train_df = train_df.sample(frac=1).reset_index(drop=True)
-
-    train_label = train_df.pop("Label")
-    train_df.pop("Process_flag")
-    train_detailed_labels = train_df.pop("detailed_label")
-    train_weights = train_df.pop("Weight")
-    train_df = train_df.round(3)
-    
-    train_data_set = {"data": train_df, "labels": train_label, "weights": train_weights, "detailed_labels": train_detailed_labels}
-
-
-    if verbose > 0:
-        print(f"[*] --- sum of weights : {np.sum(train_weights)}")
-        print(f"[*] --- sum of signal : {np.sum(train_weights[train_label==1])}")
-        print(f"[*] --- sum of background : {np.sum(train_weights[train_label==0])}")
-        
-        for key in train_set.keys():
-            print(f"[*] --- sum of weights -> {key} : {int(train_weights[train_detailed_labels == key].sum())}")  
-
-    print("\n[*] Saving train data")
-    save_train_data(train_data_set, os.path.join(output_file_loc,"challenge_data"), output_format)
         
     print("\n[*] Saving test data")
     save_test_data(test_set, os.path.join(output_file_loc, "challenge_data"), output_format)
     
-    del train_df, train_label, train_weights, train_detailed_labels, train_data_set, test_set, full_data
+    del test_set, full_data
     
     public_train_set , public_test_set  = train_test_data_generator(train_set, test_factor = public_test_factor, train_factor = public_train_factor)
 
@@ -488,6 +453,11 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
     
     print("\n[*] Saving public train data")
     save_train_data(public_train_data_set, os.path.join(output_file_loc,"public_data"), output_format)
+
+
+    print("\n[*] Saving Train data")
+    save_train_data(public_train_data_set, os.path.join(output_file_loc,"challenge_data"), output_format)
+
     print("\n[*] Saving public test data")
     def process_public_test_set(key):
         print(f"[*] --- {key} : {public_test_set[key].shape}")
@@ -617,7 +587,12 @@ if __name__ == "__main__":
                         "-T",
                         help="Factor to multiply the public test data",
                         type=int,
-                        default=5)  
+                        default=5)
+    parser.add_argument("--luminocity",
+                        "-L",
+                        help="Luminocity of the data",
+                        type=int,
+                        default=36)  
      
     args = vars(parser.parse_args())
     
@@ -635,7 +610,8 @@ if __name__ == "__main__":
                     verbose=1,
                     test_factor = args["test_factor"],
                     public_train_factor = args["public_train_factor"],
-                    public_test_factor = args["public_test_factor"]
+                    public_test_factor = args["public_test_factor"],
+                    luminosity = args["luminocity"]
                     )
     
     end_time = time.time()
