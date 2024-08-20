@@ -1,8 +1,7 @@
 
 # Variables
 CXX = g++
-CXXFLAGS = -Wall -g $(shell root-config --cflags) -I/global/cfs/cdirs/m4287/hep/Delphes-3.5.0/ -I/global/cfs/cdirs/m4287/hep/Delphes-3.5.0/external/ -I/global/cfs/cdirs/m4287/hep/Delphes-3.5.0/external/ExRootAnalysis/ 
-LDFLAGS = $(shell root-config --libs) -libDelphes
+CXXFLAGS = -Wall -g 
 SRCS = randomSeedRegister.cpp 
 TARGET_DIR = ../bin
 TARGETS = $(SRCS:.cpp=)

@@ -15,5 +15,5 @@ fi
 
 root -l -b -q  $WorkDir/scripts/preProcess.cpp\(\"$OutputDir/root_files/pythia_$2"_"$1.root\",\"$csv_files/hist_$2"_"$1\",$3\)
 
-# rm -rf $OutputDir/root_files/pythia_$2"_"$1.root
+rm -rf $OutputDir/root_files/pythia_$2"_"$1.root
 echo "Done at $(date)"
