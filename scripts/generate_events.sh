@@ -1,12 +1,11 @@
 #!/bin/bash
-module load python
-shifter --image=rootproject/root:6.28.04-ubuntu22.04 /bin/bash
+
 export PYTHIA8=/global/cfs/cdirs/m4287/hep/Pythia8
 
 # define the paths
 export Delphes_Path=/global/cfs/cdirs/m4287/hep/Delphes-3.5.0
 export WorkDir=/global/cfs/cdirs/m4287/hep/genHEPdata
-export OutputDir=/global/cfs/cdirs/m4287/hep/Delphes_PYTHIA8_output
+export OutputDir=/global/cfs/cdirs/m4287/hep/NEW_DelphesPythia_data
 
 cd $Delphes_Path
 

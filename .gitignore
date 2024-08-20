@@ -4,3 +4,5 @@
 bin/
 *.zip
 *__pycache__*
+*.o
+*.so
