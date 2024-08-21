@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --image=ragansu/fair-universe-data:test python3
+#SBATCH --image=ragansu/fair-universe-data:test
 #SBATCH --account=m4287
 #SBATCH --qos=regular
 #SBATCH -N 1
@@ -54,4 +54,4 @@ srun -n 4 -c 64 shifter bash -c "
     $WorkDir/scripts/run_merger.sh \${process} ${input_dir} ${merged_dir}
 "
 
-srun -n 1 c 256 shifter python3  Final_touches.py --input $merged_dir --output $output_dir --input-format "parquet" --output-format "parquet" --test-factor ${test_factor} --public-train-factor ${public_train_factor} --public-test-factor ${public_train_factor} --luminocity ${luminocity}
+srun -n 1 -c 256 shifter python3  Final_touches.py --input $merged_dir --output $output_dir --input-format "parquet" --output-format "parquet" --test-factor ${test_factor} --public-train-factor ${public_train_factor} --public-test-factor ${public_train_factor} --luminocity ${luminocity}
