@@ -1,7 +1,4 @@
 #!/bin/bash
-module load python
-shifter --image=rootproject/root:6.28.04-ubuntu22.04 /bin/bash
-
 export OutputDir=/global/cfs/cdirs/m4287/hep/NEW_DelphesPythia_data
 export WorkDir=/global/cfs/cdirs/m4287/hep/genHEPdata
 
