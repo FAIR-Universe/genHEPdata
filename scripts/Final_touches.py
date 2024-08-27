@@ -249,6 +249,10 @@ def train_test_data_generator(full_data, test_factor=2, train_factor = 8):
     print("\n[*] -- full_data")
     for key in full_data.keys():
         lhc_numbers = int(np.sum(full_data[key]["Weight"]))
+        print("lhc_numbers", lhc_numbers)
+        print("test_factor", test_factor)
+        print("train_factor", train_factor)
+        
       
         if key == "htautau":
             print(f"[*] --- {key} : {full_data[key].shape}")
