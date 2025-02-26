@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --image=ragansu/fair-universe-data:test
-#SBATCH --account=dasrepo
+#SBATCH --account=m4287
 #SBATCH --qos=regular
-#SBATCH -N 1
+#SBATCH -N 4
 #SBATCH --constraint=cpu
 #SBATCH -t 4:00:00
 #SBATCH -J Final_touches
@@ -20,7 +20,7 @@ luminocity=10 # in fb^-1
 
 working_dir=/global/cfs/cdirs/m4287/hep
 WorkDir=$working_dir/genHEPdata
-data_dir=$working_dir/NEW_DelphesPythia_data
+data_dir=$working_dir/DATA_PHASE_2
 merged_dir=$data_dir/Merged_files
 output_dir=$data_dir/Full_data_files_$now
 

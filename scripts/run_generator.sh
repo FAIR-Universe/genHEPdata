@@ -1,5 +1,5 @@
 #!/bin/bash
-export OutputDir=/global/cfs/cdirs/m4287/hep/NEW_DelphesPythia_data
+export OutputDir=/global/cfs/cdirs/m4287/hep/DATA_PHASE_2
 export WorkDir=/global/cfs/cdirs/m4287/hep/genHEPdata
 
 sh $WorkDir/scripts/generate_events.sh $1 $2
