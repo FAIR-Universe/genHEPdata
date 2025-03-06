@@ -9,10 +9,17 @@
 
 now=$(date +"%Y%m%d")
 
+echo
+echo "Start"
+echo "Date and Time      : $now"
+echo "SLURM_JOB_ID       : $SLURM_JOB_ID"
+echo "SLURM_JOB_NODELIST : $SLURM_JOB_NODELIST"
+echo "SLURM_NNODES       : $SLURM_NNODES"
+echo
 
 # Set default values for the optional arguments
-public_train_factor=100
-public_test_factor=60
+public_train_factor=1
+public_test_factor=1
 test_factor=60
 luminocity=10 # in fb^-1
 
@@ -24,12 +31,12 @@ data_dir=$working_dir/DATA_PHASE_2
 merged_dir=$data_dir/Merged_files
 output_dir=$data_dir/Full_data_files_$now
 
-Processes=("ttbar" "ztautau" "htautau" "diboson")
+Processes=("ttbar" "htautau" "diboson" "ztautau")
 
 # Use srun to execute the script with Shifter
 srun -n 4 -c 256 shifter bash -c "
     # Define the array inside the shifter environment
-    Processes=('ttbar' 'ztautau' 'htautau' 'diboson')
+    Processes=("ttbar" "htautau" "diboson" "ztautau")
 
     # Access the correct process based on SLURM_PROCID
     process=\${Processes[\$SLURM_PROCID]}

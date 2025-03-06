@@ -2,7 +2,7 @@
 #SBATCH --image=rootproject/root:6.28.04-ubuntu22.04 
 #SBATCH --account=m4287
 #SBATCH --qos=regular
-#SBATCH -N 256
+#SBATCH -N 30
 #SBATCH --constraint=cpu
 #SBATCH -t 4:00:00
 #SBATCH -J pythia_gen
@@ -10,7 +10,7 @@
 #SBATCH --mail-type=ALL
 
 number_of_jobs=$(($SLURM_NNODES*128))
-main_seed=357895654
+main_seed=0
 process=ztautau
 label=0
 
@@ -28,9 +28,6 @@ echo
 
 module load python
 
-main_seed=357895654
-process=ztautau
-label=0
 export WorkDir=/global/cfs/cdirs/m4287/hep/genHEPdata
 
 srun -n $number_of_jobs -c 2 shifter bash -c "

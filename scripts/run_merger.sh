@@ -14,16 +14,25 @@ mkdir -p "$OUTPUT_DIR"
 # Number of files to merge per batch
 BATCH_SIZE=1000
 
+echo "Merging ROOT files in $input_dir"
+echo "Output directory: $OUTPUT_DIR"
+echo "Merging files in batches of $BATCH_SIZE"
+
+
 # Initialize the batch counter
 batch_num=1
 
 file_list=$input_dir/file_name_list.txt
+
+# ls $FILES > $file_list
 
 # Loop over the files in batches of BATCH_SIZE
 cat ${file_list} | xargs -n $BATCH_SIZE | while read -r file_list; do
     # Create the output file name for the current batch
     output_file="$OUTPUT_DIR/merged_${batch_num}.root"
     
+    echo "Merging batch $batch_num into $output_file"
+
     # Run hadd to merge the current batch of files
     hadd -f "$output_file" $file_list
     

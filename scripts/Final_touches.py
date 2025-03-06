@@ -359,8 +359,9 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
       
     full_data = clean_data(full_data, derived_quantities=derived_quantities)
     
+    crossection_file = os.path.join(root_dir, "new_crosssection.json")
 
-    with open("new_crosssection.json") as f:
+    with open(crossection_file) as f:
         crosssection_dict = json.load(f)
 
     weight_table = generate_weight_table(full_data.keys(), input_file_loc, crosssection_dict, luminosity)
