@@ -6,3 +6,5 @@ bin/
 *__pycache__*
 *.o
 *.so
+*.ipynb__checkpoints*
+*.pyc
