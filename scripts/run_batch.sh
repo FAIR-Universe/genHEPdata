@@ -6,8 +6,7 @@
 #SBATCH --constraint=cpu
 #SBATCH -t 4:00:00
 #SBATCH -J pythia_gen
-#SBATCH --mail-user=ragansu@nersc.gov
-#SBATCH --mail-type=ALL
+
 
 number_of_jobs=$(($SLURM_NNODES*128))
 main_seed=0
