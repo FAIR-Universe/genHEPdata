@@ -249,6 +249,10 @@ def train_test_data_generator(full_data, test_factor=2, train_factor = 8):
     print("\n[*] -- full_data")
     for key in full_data.keys():
         lhc_numbers = int(np.sum(full_data[key]["Weight"]))
+        print("lhc_numbers", lhc_numbers)
+        print("test_factor", test_factor)
+        print("train_factor", train_factor)
+        
       
         if key == "htautau":
             print(f"[*] --- {key} : {full_data[key].shape}")
@@ -355,8 +359,9 @@ def dataGenerator(input_file_loc=os.path.join(root_dir, "input_data"),
       
     full_data = clean_data(full_data, derived_quantities=derived_quantities)
     
+    crossection_file = os.path.join(root_dir, "crosssection.json")
 
-    with open("new_crosssection.json") as f:
+    with open(crossection_file) as f:
         crosssection_dict = json.load(f)
 
     weight_table = generate_weight_table(full_data.keys(), input_file_loc, crosssection_dict, luminosity)

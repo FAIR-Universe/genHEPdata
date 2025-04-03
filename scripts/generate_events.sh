@@ -5,7 +5,7 @@ export PYTHIA8=/global/cfs/cdirs/m4287/hep/Pythia8
 # define the paths
 export Delphes_Path=/global/cfs/cdirs/m4287/hep/Delphes-3.5.0
 export WorkDir=/global/cfs/cdirs/m4287/hep/genHEPdata
-export OutputDir=/global/cfs/cdirs/m4287/hep/NEW_DelphesPythia_data
+export OutputDir=/global/cfs/cdirs/m4287/hep/DATA_PHASE_2
 
 cd $Delphes_Path
 
