@@ -25,11 +25,8 @@ luminocity=10 # in fb^-1
 
 # Define the working directory
 
-working_dir=/global/cfs/cdirs/m4287/hep
-WorkDir=$working_dir/genHEPdata
-data_dir=$working_dir/DATA_PHASE_2
-merged_dir=$data_dir/Merged_files
-output_dir=$data_dir/Full_data_files_$now
+merged_dir=$OutputDir/Merged_files
+Full_data_dir=$OutputDir/Full_data_files_$now
 
 Processes=("ttbar" "htautau" "diboson" "ztautau")
 

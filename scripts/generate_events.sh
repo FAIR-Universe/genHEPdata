@@ -1,5 +1,6 @@
 #!/bin/bash
 
+cd $DELPHES_DIR
 
 SEED=$1
 PROCESS=$2

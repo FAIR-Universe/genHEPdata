@@ -1,18 +1,9 @@
 
-/*
-This macro shows how to compute jet energy scale.
-root -l examples/Example4.C'("delphes_output.root", "plots.root")'
-*/
 
-#ifdef __CLING__
 R__LOAD_LIBRARY(libDelphes)
 #include "classes/DelphesClasses.h"
-#include "ExRootTreeReader.h"
-#include "ExRootResult.h"
-#else
-class ExRootTreeReader;
-class ExRootResult;
-#endif
+#include "external/ExRootAnalysis/ExRootTreeReader.h"
+#include "external/ExRootAnalysis/ExRootResult.h"
 
 #include <iostream>
 #include <fstream>
@@ -22,8 +13,15 @@ class ExRootResult;
 
 //------------------------------------------------------------------------------
 
-void AnalyseEvents(ExRootTreeReader *treeReader, std::string outputFile_part, const int label)
+void AnalyseEvents(ExRootTreeReader *treeReader, std::string outputFile_part, const int label, std::string process_name = "Unknown")
 {
+
+    // Load branches needed for analysis
+    TClonesArray *branchParticle = treeReader->UseBranch("Particle");
+    TClonesArray *branchGenJet = treeReader->UseBranch("GenJet");
+    TClonesArray *branchGenMissingET = treeReader->UseBranch("GenMissingET");
+    TClonesArray *branchGenEvent = treeReader->UseBranch("GenEvent");
+
 
     TClonesArray *branchElectron = treeReader->UseBranch("Electron");
     TClonesArray *branchMuon = treeReader->UseBranch("Muon");
@@ -43,18 +41,20 @@ void AnalyseEvents(ExRootTreeReader *treeReader, std::string outputFile_part, co
     TLorentzVector p_lep;
     TLorentzVector p_had;
     TLorentzVector p_tot;
-    double Weight = 1.;
     double cross_section = 1.;
     double luminosity = 139; // fb-1
     Long64_t entry;
 
-    Int_t i, j, PRI_n_jets;
+    Int_t i, j;
     Int_t flag_el = 0;
     Int_t flag_mu = 0;
     Int_t flag_had = 0;
 
     std::string output_filename;
 
+    output_filename = outputFile_part + process_name + ".root";
+    std::cout << "Output file: " << output_filename << std::endl;
+    
     TFile *outfile = new TFile(output_filename.c_str(), "RECREATE");
     TH1 *h_cutflow = new TH1F("cutflow", "Cut flow histogram", 10, 0.0, 10.0);
     TH1 *process_ID = new TH1F("process_ID", "Process ID", 1000, 0.0, 1000.0);
@@ -62,7 +62,6 @@ void AnalyseEvents(ExRootTreeReader *treeReader, std::string outputFile_part, co
     TTree *tree = new TTree("physics", "Physics Event Data");
     
     // Define variables for all columns
-    Int_t entry;
     Float_t PRI_lep_pt, PRI_lep_eta, PRI_lep_phi;
     Int_t PRI_lep_charge;
     Bool_t PRI_electron_flag, PRI_muon_flag;
@@ -78,6 +77,7 @@ void AnalyseEvents(ExRootTreeReader *treeReader, std::string outputFile_part, co
     Float_t Weight;
     Int_t Label;
     Int_t Process_flag;
+    
     
     // Create branches for all variables
     tree->Branch("entry", &entry, "entry/I");
@@ -106,8 +106,8 @@ void AnalyseEvents(ExRootTreeReader *treeReader, std::string outputFile_part, co
     tree->Branch("Weight", &Weight, "Weight/F");
     tree->Branch("Label", &Label, "Label/I");
     tree->Branch("Process_flag", &Process_flag, "Process_flag/I");
+    tree->Branch("process_name", &process_name);
 
-    outputFile_part = outputFile_part + ".csv";
 
     // Loop over all events
     for (entry = 0; entry < allEntries; ++entry)
@@ -284,7 +284,7 @@ void AnalyseEvents(ExRootTreeReader *treeReader, std::string outputFile_part, co
 }
 //------------------------------------------------------------------------------
 
-void preProcess(const char *inputFile, std::string outputFile_part, const int label)
+void preProcess(const char *inputFile, std::string outputFile_part, const int label, std::string process_name = "Unknown")
 {
 
     gSystem->Load("libDelphes");
@@ -295,7 +295,7 @@ void preProcess(const char *inputFile, std::string outputFile_part, const int la
     ExRootTreeReader *treeReader = new ExRootTreeReader(chain);
     ExRootResult *result = new ExRootResult();
 
-    AnalyseEvents(treeReader, outputFile_part, label);
+    AnalyseEvents(treeReader, outputFile_part, label, process_name);
 
     std::cout << "** Exiting..." << std::endl;
 
