@@ -1,7 +1,5 @@
 #!/bin/bash
 
-cd $Delphes_Path
-
 
 SEED=$1
 PROCESS=$2
