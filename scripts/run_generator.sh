@@ -9,7 +9,7 @@ mkdir -p $OutputDir/root_files
 
 
 sh $WorkDir/scripts/generate_events.sh $1 $2
-output_files=$OutputDir/csv_files_$2
+output_files=$OutputDir/processed_files
 
 if [ ! -d $output_files ]; then
     mkdir $output_files

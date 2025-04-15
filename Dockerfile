@@ -60,4 +60,13 @@ ENV DELPHES_DIR=/tmp/delphes
 ENV DELPHES_INCLUDE=$DELPHES_DIR/Delphes
 ENV LD_LIBRARY_PATH=$DELPHES_DIR:$LD_LIBRARY_PATH
 
+RUN pip install --no-cache-dir \
+    numpy \
+    matplotlib \
+    pandas \
+    uproot \
+    scipy \
+    jupyterlab \
+    ipykernel
+
 CMD ["/bin/bash"]

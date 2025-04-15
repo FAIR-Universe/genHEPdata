@@ -8,15 +8,21 @@ import numpy as np
 import json
 
 
-def process_counter(output_file_name):
+def process_counter(root_file_path):
     
-    # Open the ROOT file using uproot
-    with uproot.open(output_file_name + ".root") as file:
+
+    with uproot.open(root_file_path) as file:
+        # Check if the histogram exists
+        if "process_ID;1" not in file:
+            print("KEYS: ", file.keys())
+
+            raise KeyError(f"Histogram 'process_ID;1' not found in the file: {root_file_path}")
+        # Print the keys in the file
+        
         # Access the histogram
-        process_hist = file["process_ID"]
+        process_hist = file["process_ID;1"]
         
         # Convert histogram to numpy arrays
-        bin_edges = process_hist.axis().edges()
         bin_contents = process_hist.values()
         
         process_dict = {}
@@ -26,10 +32,6 @@ def process_counter(output_file_name):
                 print(content)
                 process_dict[i] = content
         
-        # Save the dictionary as a JSON file
-        with open(output_file_name + ".json", "w") as f:
-            json.dump(process_dict, f)
-    
     return process_dict
 
 
@@ -49,8 +51,8 @@ def root_to_pandas(root_file_path, tree_name):
     
     # Access the TTree
     tree = file[tree_name]
-    
-    # Convert to Pandas DataFrame
+
+    # Convert the TTree to a Pandas DataFrame
     df = tree.arrays(library="pd")
     
     return df
@@ -90,9 +92,6 @@ def clean_data(df):
         df.pop('entry')
     except KeyError:
         print("No entry column")
-
-
-    df = df.astype(np.float32)
 
 
     return df
@@ -143,7 +142,7 @@ if __name__ == "__main__":
         print("Please provide input file location")
         raise ValueError("Input file location is required.")
     
-    process_dict = process_counter(file_read_loc.stem)
+    process_dict = process_counter(file_read_loc)
 
     crossection_file = os.path.join(root_dir, "crosssection.json")
 
@@ -152,7 +151,7 @@ if __name__ == "__main__":
 
     weight_table = generate_weight_table(process_dict, crosssection_dict, args.luminocity)
 
-    df = root_to_pandas(file_read_loc, "tree")
+    df = root_to_pandas(file_read_loc, "physics;1")
     df = clean_data(df)
 
     df["Weight"] = weighting(df["Process_flag"], weight_table)
