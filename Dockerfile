@@ -64,6 +64,9 @@ RUN pip install --no-cache-dir \
     numpy \
     matplotlib \
     pandas \
+    awkward-pandas\
+    fastparquet\
+    pyarrow \
     uproot \
     scipy \
     jupyterlab \

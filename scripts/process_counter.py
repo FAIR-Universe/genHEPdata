@@ -58,14 +58,22 @@ def root_to_pandas(root_file_path, tree_name):
     return df
 
 def generate_weight_table(number_of_events, crosssection_dict, luminocity):
-    weights_dict = {}    
+    
+    # Convert the keys of crosssection_dict to integers
+    crosssection_dict = {int(k): v for k, v in crosssection_dict.items()}
                 
     for key in number_of_events.keys():
-        try:
+        weights_dict = {}
+        
+        if key in crosssection_dict.keys():
+            print(f"[*] --- {key} found in crosssection_dict")
+
             weights_dict[key] = (crosssection_dict[key]["crosssection"] * luminocity / number_of_events[key] )
         
-        except KeyError:
+        else:
             print(f"[*] --- {key} not found in crosssection_dict")
+            print(f"[*] --- keys in crosssection_dict: {crosssection_dict.keys()}")
+
             weights_dict[key] = -1
                        
     return weights_dict
@@ -134,7 +142,10 @@ if __name__ == "__main__":
     if args.output:
         merged_file_path = Path(args.output)
     else:
-        merged_file_path = Path.cwd() / merged_file_name
+        if args.parquet:
+            merged_file_path = Path.cwd() / "Merged_output.parquet"
+        else:
+            merged_file_path = Path.cwd() / "Merged_output.csv"
 
     if args.input:
         file_read_loc = Path(args.input)
@@ -155,7 +166,12 @@ if __name__ == "__main__":
     df = clean_data(df)
 
     df["Weight"] = weighting(df["Process_flag"], weight_table)
-
+    
+    df.pop("Process_flag")
+    
+    df.rename(columns={"process_name": "detailed_label"}, inplace=True)
+    df.rename(columns={"Label": "label"}, inplace=True)
+    
     if args.parquet:
         to_parquet(df, merged_file_path)
     else:

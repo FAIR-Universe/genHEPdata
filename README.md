@@ -26,7 +26,7 @@ Example for podman
 podman run -it \
     -v $WorkDir:/program \
     -e WorkDir=/program \
-    docker.io/ragansu/root-delphes:pythia bash /program/scripts/run_generator.sh ${seed} ${process} ${label} 
+    docker.io/ragansu/root-delphes:pythia_pip_new bash /program/scripts/run_generator.sh ${seed} ${process} ${label} 
 ```
 
 Example for Docker
@@ -34,13 +34,13 @@ Example for Docker
 docker run -it \
     -v $WorkDir:/program \
     -e WorkDir=/program \
-    ragansu/root-delphes:pythia bash /program/scripts/run_generator.sh ${seed} ${process} ${label} 
+    ragansu/root-delphes:pythia_pip_new bash /program/scripts/run_generator.sh ${seed} ${process} ${label} 
 ```
 Example for singularity
 ```
 singularity exec --bind $WorkDir:/program \
     -e WorkDir=/program \
-    docker://ragansu/root-delphes:pythia bash /program/scripts/run_generator.sh ${seed} ${process} ${label} 
+    docker://ragansu/root-delphes:pythia_pip_new bash /program/scripts/run_generator.sh ${seed} ${process} ${label} 
 ```
 
 

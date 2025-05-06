@@ -1,5 +1,4 @@
 
-Process=$1
 input_dir=$WorkDir/Output/processed_files
 merged_dir=$WorkDir/Output/merged_files
 # Check if the input directory is provided
@@ -12,7 +11,7 @@ mkdir -p $merged_dir
 
 
 # Pattern to match the ROOT files (e.g., *.root)
-FILES="$input_dir/*.root"
+FILES="$input_dir/process_*.root"
 
 # Output directory for the merged files
 OUTPUT_DIR="$input_dir/merged_files"
@@ -33,7 +32,6 @@ ls $input_dir
 
 echo "Files to merge: $FILES"
 
-pip install awkward-pandas fastparquet pyarrow
 file_list=$input_dir/file_name_list.txt
 
 ls $FILES > $file_list
@@ -53,11 +51,11 @@ cat ${file_list} | xargs -n $BATCH_SIZE | while read -r file_list; do
 done
 
 
-rm $input_dir/$Process.root
+rm $input_dir/Merged.root
 merged_file_list=$(ls -1 $OUTPUT_DIR/*.root)
 
 hadd ${input_dir}/${Process}.root $merged_file_list
 
 
-python3 $WorkDir/scripts/process_counter.py --input $input_dir/$Process.root --output $merged_dir/$Process -p
+python3 $WorkDir/scripts/process_counter.py --input $input_dir/Merged.root --output $merged_dir/Merged -p --luminocity 10
         
