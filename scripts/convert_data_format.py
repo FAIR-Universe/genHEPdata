@@ -67,9 +67,7 @@ class Data:
         train_labels_file = os.path.join(
             self.input_dir, "train", "labels", "data.labels"
         )
-        train_settings_file = os.path.join(
-            self.input_dir, "train", "settings", "data.json"
-        )
+
         train_weights_file = os.path.join(
             self.input_dir, "train", "weights", "data.weights"
         )
@@ -78,6 +76,7 @@ class Data:
         )
 
         parquet_file = pq.ParquetFile(train_data_file)
+        
 
         # Step 1: Determine the total number of rows
         total_rows = sum(parquet_file.metadata.row_group(i).num_rows for i in range(parquet_file.num_row_groups))
@@ -157,8 +156,8 @@ class Data:
         }
         
         self.__train_df = sampled_df
-        self.__train_df["detailed_label"] = selected_train_detailed_labels
-        self.__train_df["label"] = selected_train_labels
+        self.__train_df["detailed_labels"] = selected_train_detailed_labels
+        self.__train_df["labels"] = selected_train_labels
         self.__train_df["weights"] = selected_train_weights
         
 
@@ -219,17 +218,19 @@ class Data:
         merged_data = []
         for key in self.__test_set.keys():
             test_data = self.__test_set[key]
-            test_data["detailed_label"] = key
+            test_data["detailed_labels"] = key
             if key == 'htautau':
-                test_data["label"] = 1
+                test_data["labels"] = 1
             else:
-                test_data["label"] = 0
+                test_data["labels"] = 0
             
             merged_data.append(test_data)
             
         merged_data.append(self.__train_df)
-        merged_data = pd.concat(merged_data, ignore_index=True) 
+        merged_data = pd.concat(merged_data, ignore_index=True)
         
+        merged_data["weights"] = merged_data["weights"].astype(np.float32) / 2
+                
         return merged_data
 
         
@@ -257,11 +258,30 @@ data.load_train_set()
 data.load_test_set()
 merged_data = data.merge_test_train()
 
+meta_data = {
+    "author": "FAIR Universe",
+    "total_rows": len(merged_data),
+    "total_columns": len(merged_data.columns),
+    "columns": list(merged_data.columns),
+    "detailed_labels": merged_data["detailed_labels"].unique().tolist(),
+    "sum_weights": float(merged_data["weights"].sum()),  # Convert to native float
+    "luminosity": 10,
+}
+
+print (f"Meta data: {meta_data}")
+
+metadata_file_path = merged_file_path.with_suffix('.json')
+with open(metadata_file_path, 'w') as f:
+    json.dump(meta_data, f, indent=4)
+    logger.info(f"Meta data saved to {metadata_file_path}")
+
 from process_counter import to_parquet, to_csv
 if args.parquet:
     to_parquet(merged_data, merged_file_path)
 else:
     to_csv(merged_data, merged_file_path)
+    
+logger.info(f"Merged data saved to {merged_file_path}")
     
     
     

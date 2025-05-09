@@ -112,9 +112,12 @@ def weighting(process_flag,weight_table):
     for key in weight_table.keys():
         weights[process_flag == int(key)] = weight_table[key]
     return weights 
-def to_parquet(data, output_file_name):
+def to_parquet(data, output_file_name,metadata=None):
     parquet_file_name = output_file_name.with_suffix(".parquet")
-    data.to_parquet(parquet_file_name)
+    if metadata is not None:
+        data.to_parquet(parquet_file_name, metadata=metadata)
+    else:
+        data.to_parquet(parquet_file_name)
     print("Data saved as parquet file")
 
 def to_csv(data, output_file_name):
@@ -172,8 +175,18 @@ if __name__ == "__main__":
     df.rename(columns={"process_name": "detailed_label"}, inplace=True)
     df.rename(columns={"Label": "label"}, inplace=True)
     
+    sum_weights = df["Weight"].sum()
+    meta_data = {
+        "author": "FAIR Universe",
+        "total_rows": len(df),
+        "total_columns": len(df.columns),
+        "columns": list(df.columns),
+        "detailed_labels": df["detailed_labels"].unique().tolist(),
+        "sum_weights": float(df["weights"].sum()),  # Convert to native float
+        "luminosity": 10,
+    }    
     if args.parquet:
-        to_parquet(df, merged_file_path)
+        to_parquet(df, merged_file_path, engine="pyarrow", metadata=meta_data)
     else:
         to_csv(df, merged_file_path)
 
