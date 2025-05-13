@@ -10,6 +10,11 @@ import logging
 import io
 import argparse
 from pathlib import Path
+import sys
+
+
+
+from  derived_quantities import DER_data
 
 
 # Get the logging level from an environment variable, default to INFO
@@ -258,13 +263,17 @@ data.load_train_set()
 data.load_test_set()
 merged_data = data.merge_test_train()
 
+
+
+full_data = DER_data(merged_data)
+
 meta_data = {
     "author": "FAIR Universe",
-    "total_rows": len(merged_data),
-    "total_columns": len(merged_data.columns),
-    "columns": list(merged_data.columns),
-    "detailed_labels": merged_data["detailed_labels"].unique().tolist(),
-    "sum_weights": float(merged_data["weights"].sum()),  # Convert to native float
+    "total_rows": len(full_data),
+    "total_columns": len(full_data.columns),
+    "columns": list(full_data.columns),
+    "detailed_labels": full_data["detailed_labels"].unique().tolist(),
+    "sum_weights": float(full_data["weights"].sum()),  # Convert to native float
     "luminosity": 10,
 }
 
@@ -277,11 +286,9 @@ with open(metadata_file_path, 'w') as f:
 
 from process_counter import to_parquet, to_csv
 if args.parquet:
-    to_parquet(merged_data, merged_file_path)
+    to_parquet(full_data, merged_file_path)
 else:
-    to_csv(merged_data, merged_file_path)
-    
-logger.info(f"Merged data saved to {merged_file_path}")
-    
-    
-    
+    to_csv(full_data, merged_file_path)
+
+logger.info(f"Full data saved to {merged_file_path}")
+
