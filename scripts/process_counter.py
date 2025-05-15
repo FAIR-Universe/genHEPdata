@@ -184,9 +184,15 @@ if __name__ == "__main__":
         "detailed_labels": df["detailed_labels"].unique().tolist(),
         "sum_weights": float(df["weights"].sum()),  # Convert to native float
         "luminosity": 10,
-    }    
+    }
+    
+    meta_data_file = merged_file_path.with_name(merged_file_path.stem + "_metadata.json")
+    with open(meta_data_file, "w") as f:
+        json.dump(meta_data, f, indent=4)
+    print(f"[*] --- Metadata saved to {meta_data_file}")    
+        
     if args.parquet:
-        to_parquet(df, merged_file_path, engine="pyarrow", metadata=meta_data)
+        to_parquet(df, merged_file_path, engine="pyarrow")
     else:
         to_csv(df, merged_file_path)
 

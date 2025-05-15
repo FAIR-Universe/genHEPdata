@@ -7,4 +7,4 @@ podman-hpc run -it \
     -v $WorkDir:/program \
     -v $input_dir:/input \
     -e WorkDir=/program \
-    docker.io/ragansu/root-delphes:pythia_pip_new python3 /program/scripts/convert_data_format.py --input /input --output /program/Output/merged_files/public_data -p > log_file_com.log 2> err_file_com.log 
+    docker.io/ragansu/root-delphes:pythia_pip_new python3 /program/scripts/convert_data_format.py --input /input --output /program/Output/merged_files/FAIR_Universe_HiggsML_data -p > log_file_com.log 2> err_file_com.log 
