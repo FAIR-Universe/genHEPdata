@@ -8,7 +8,7 @@
 #SBATCH -J pythia_gen
 
 
-number_of_jobs=$(($SLURM_NNODES*128))
+number_of_jobs=$(($SLURM_NNODES*128)) # Number of jobs to run set to 128 per node
 main_seed=0
 process=ztautau
 label=0
