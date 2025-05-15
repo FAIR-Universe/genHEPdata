@@ -1,6 +1,11 @@
 
 input_dir=$WorkDir/Output/processed_files
 merged_dir=$WorkDir/Output/merged_files
+output_file_name=1
+default_value="Merged"
+
+output_filename=${1:-default_value}
+
 # Check if the input directory is provided
 if [ -z "$input_dir" ]; then
     echo "Usage: $0 <input_directory>"
@@ -54,8 +59,8 @@ done
 rm $input_dir/Merged.root
 merged_file_list=$(ls -1 $OUTPUT_DIR/*.root)
 
-hadd ${input_dir}/${Process}.root $merged_file_list
+hadd ${input_dir}/Merged.root $merged_file_list
 
 
-python3 $WorkDir/scripts/process_counter.py --input $input_dir/Merged.root --output $merged_dir/Merged -p --luminocity 10
+python3 $WorkDir/scripts/Final_touches.py --input $input_dir/Merged.root --output $merged_dir/$output_filename -p --luminocity 10
         
