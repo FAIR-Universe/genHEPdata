@@ -20,5 +20,4 @@ cd $DELPHES_DIR
 root -l -b -q "$WorkDir/scripts/preProcess.cpp(\"$OutputDir/root_files/pythia_${2}_${1}.root\", \"$output_files/process_${1}\", $3, \"$2\")"
 
 
-# rm -rf $OutputDir/root_files/pythia_$2"_"$1.root
 echo "Done at $(date)"
