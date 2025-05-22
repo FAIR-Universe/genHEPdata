@@ -1,18 +1,9 @@
 
-/*
-This macro shows how to compute jet energy scale.
-root -l examples/Example4.C'("delphes_output.root", "plots.root")'
-*/
 
-#ifdef __CLING__
 R__LOAD_LIBRARY(libDelphes)
 #include "classes/DelphesClasses.h"
-#include "ExRootAnalysis/ExRootTreeReader.h"
-#include "ExRootAnalysis/ExRootResult.h"
-#else
-class ExRootTreeReader;
-class ExRootResult;
-#endif
+#include "external/ExRootAnalysis/ExRootTreeReader.h"
+#include "external/ExRootAnalysis/ExRootResult.h"
 
 #include <iostream>
 #include <fstream>
@@ -22,8 +13,15 @@ class ExRootResult;
 
 //------------------------------------------------------------------------------
 
-void AnalyseEvents(ExRootTreeReader *treeReader, std::string outputFile_part, const int label)
+void AnalyseEvents(ExRootTreeReader *treeReader, std::string outputFile_part, const int label, std::string process_name = "Unknown")
 {
+
+    // Load branches needed for analysis
+    TClonesArray *branchParticle = treeReader->UseBranch("Particle");
+    TClonesArray *branchGenJet = treeReader->UseBranch("GenJet");
+    TClonesArray *branchGenMissingET = treeReader->UseBranch("GenMissingET");
+    TClonesArray *branchGenEvent = treeReader->UseBranch("GenEvent");
+
 
     TClonesArray *branchElectron = treeReader->UseBranch("Electron");
     TClonesArray *branchMuon = treeReader->UseBranch("Muon");
@@ -43,27 +41,73 @@ void AnalyseEvents(ExRootTreeReader *treeReader, std::string outputFile_part, co
     TLorentzVector p_lep;
     TLorentzVector p_had;
     TLorentzVector p_tot;
-    double Weight = 1.;
     double cross_section = 1.;
     double luminosity = 139; // fb-1
     Long64_t entry;
 
-    Int_t i, j, n_jet;
-    Int_t process_flag;
+    Int_t i, j;
     Int_t flag_el = 0;
     Int_t flag_mu = 0;
     Int_t flag_had = 0;
 
     std::string output_filename;
 
-    output_filename = outputFile_part + "_cuthist.root";
-
+    output_filename = outputFile_part + process_name + ".root";
+    std::cout << "Output file: " << output_filename << std::endl;
+    
     TFile *outfile = new TFile(output_filename.c_str(), "RECREATE");
     TH1 *h_cutflow = new TH1F("cutflow", "Cut flow histogram", 10, 0.0, 10.0);
     TH1 *process_ID = new TH1F("process_ID", "Process ID", 1000, 0.0, 1000.0);
+    // Create a TTree (more flexible than TNtuple for complex data)
+    TTree *tree = new TTree("physics", "Physics Event Data");
+    
+    // Define variables for all columns
+    Float_t PRI_lep_pt, PRI_lep_eta, PRI_lep_phi;
+    Int_t PRI_lep_charge;
+    Bool_t PRI_electron_flag, PRI_muon_flag;
+    Float_t PRI_had_pt, PRI_had_eta, PRI_had_phi;
+    Int_t PRI_had_charge;
+    Float_t PRI_jet_leading_pt, PRI_jet_leading_eta, PRI_jet_leading_phi;
+    Int_t PRI_jet_leading_charge;
+    Float_t PRI_jet_subleading_pt, PRI_jet_subleading_eta, PRI_jet_subleading_phi;
+    Int_t PRI_jet_subleading_charge;
+    Int_t PRI_n_jets;
+    Float_t PRI_jet_all_pt;
+    Float_t PRI_met, PRI_met_phi;
+    Float_t Weight;
+    Int_t Label;
+    Int_t Process_flag;
+    
+    
+    // Create branches for all variables
+    tree->Branch("entry", &entry, "entry/I");
+    tree->Branch("PRI_lep_pt", &PRI_lep_pt, "PRI_lep_pt/F");
+    tree->Branch("PRI_lep_eta", &PRI_lep_eta, "PRI_lep_eta/F");
+    tree->Branch("PRI_lep_phi", &PRI_lep_phi, "PRI_lep_phi/F");
+    tree->Branch("PRI_lep_charge", &PRI_lep_charge, "PRI_lep_charge/I");
+    tree->Branch("PRI_electron_flag", &PRI_electron_flag, "PRI_electron_flag/O");
+    tree->Branch("PRI_muon_flag", &PRI_muon_flag, "PRI_muon_flag/O");
+    tree->Branch("PRI_had_pt", &PRI_had_pt, "PRI_had_pt/F");
+    tree->Branch("PRI_had_eta", &PRI_had_eta, "PRI_had_eta/F");
+    tree->Branch("PRI_had_phi", &PRI_had_phi, "PRI_had_phi/F");
+    tree->Branch("PRI_had_charge", &PRI_had_charge, "PRI_had_charge/I");
+    tree->Branch("PRI_jet_leading_pt", &PRI_jet_leading_pt, "PRI_jet_leading_pt/F");
+    tree->Branch("PRI_jet_leading_eta", &PRI_jet_leading_eta, "PRI_jet_leading_eta/F");
+    tree->Branch("PRI_jet_leading_phi", &PRI_jet_leading_phi, "PRI_jet_leading_phi/F");
+    tree->Branch("PRI_jet_leading_charge", &PRI_jet_leading_charge, "PRI_jet_leading_charge/I");
+    tree->Branch("PRI_jet_subleading_pt", &PRI_jet_subleading_pt, "PRI_jet_subleading_pt/F");
+    tree->Branch("PRI_jet_subleading_eta", &PRI_jet_subleading_eta, "PRI_jet_subleading_eta/F");
+    tree->Branch("PRI_jet_subleading_phi", &PRI_jet_subleading_phi, "PRI_jet_subleading_phi/F");
+    tree->Branch("PRI_jet_subleading_charge", &PRI_jet_subleading_charge, "PRI_jet_subleading_charge/I");
+    tree->Branch("PRI_n_jets", &PRI_n_jets, "PRI_n_jets/I");
+    tree->Branch("PRI_jet_all_pt", &PRI_jet_all_pt, "PRI_jet_all_pt/F");
+    tree->Branch("PRI_met", &PRI_met, "PRI_met/F");
+    tree->Branch("PRI_met_phi", &PRI_met_phi, "PRI_met_phi/F");
+    tree->Branch("Weight", &Weight, "Weight/F");
+    tree->Branch("Label", &Label, "Label/I");
+    tree->Branch("Process_flag", &Process_flag, "Process_flag/I");
+    tree->Branch("process_name", &process_name);
 
-    outputFile_part = outputFile_part + ".csv";
-    myfile_part.open(outputFile_part);
 
     // Loop over all events
     for (entry = 0; entry < allEntries; ++entry)
@@ -82,20 +126,16 @@ void AnalyseEvents(ExRootTreeReader *treeReader, std::string outputFile_part, co
         // if(missingET->MET < 20){continue;}
         h_cutflow->Fill(1);
 
-        double charge_lep = 0.;
-        double pt_lep = 0.;
-        double eta_lep = 0.;
-        double phi_lep = 0.;
         flag_el = 0;
         for (i = 0; i < branchElectron->GetEntriesFast(); ++i)
         {
             electron = (Electron *)branchElectron->At(i);
             if (electron->PT > 15)
             {
-                pt_lep = electron->PT;
-                eta_lep = electron->Eta;
-                phi_lep = electron->Phi;
-                charge_lep = electron->Charge;
+                PRI_lep_pt = electron->PT;
+                PRI_lep_eta = electron->Eta;
+                PRI_lep_phi = electron->Phi;
+                PRI_lep_charge = electron->Charge;
                 p_lep = electron->P4();
                 flag_el++;
             }
@@ -107,10 +147,10 @@ void AnalyseEvents(ExRootTreeReader *treeReader, std::string outputFile_part, co
             muon = (Muon *)branchMuon->At(j);
             if (muon->PT > 15)
             {
-                pt_lep = muon->PT;
-                eta_lep = muon->Eta;
-                phi_lep = muon->Phi;
-                charge_lep = muon->Charge;
+                PRI_lep_pt = muon->PT;
+                PRI_lep_eta = muon->Eta;
+                PRI_lep_phi = muon->Phi;
+                PRI_lep_charge = muon->Charge;
                 p_lep = muon->P4();
                 flag_mu++;
             }
@@ -126,16 +166,12 @@ void AnalyseEvents(ExRootTreeReader *treeReader, std::string outputFile_part, co
         }
         h_cutflow->Fill(2);
 
-        if (pt_lep < 20)
+        if (PRI_lep_pt < 20)
         {
             continue;
         }
         h_cutflow->Fill(3);
 
-        double charge_had = 0;
-        double pt_had = 0.;
-        double eta_had = 0.;
-        double phi_had = 0.;
         flag_had = 0;
 
         for (i = 0; i < branchJet->GetEntriesFast(); ++i)
@@ -148,10 +184,10 @@ void AnalyseEvents(ExRootTreeReader *treeReader, std::string outputFile_part, co
             }
             if (jet->TauTag == 1)
             {
-                charge_had = jet->Charge;
-                pt_had = jet->PT;
-                eta_had = jet->Eta;
-                phi_had = jet->Phi;
+                PRI_had_charge = jet->Charge;
+                PRI_had_pt = jet->PT;
+                PRI_had_eta = jet->Eta;
+                PRI_had_phi = jet->Phi;
                 p_had = jet->P4();
                 flag_had++;
             }
@@ -161,29 +197,23 @@ void AnalyseEvents(ExRootTreeReader *treeReader, std::string outputFile_part, co
             continue;
         }
         h_cutflow->Fill(4);
-        if ((charge_had + charge_lep) != 0)
+        if ((PRI_had_charge + PRI_lep_charge) != 0)
         {
             continue;
         }
         h_cutflow->Fill(5);
-        if (pt_had < 20)
+        if (PRI_had_pt < 20)
         {
             continue;
         }
         h_cutflow->Fill(6);
 
-        n_jet = 0;
-
-        std::array<double, 2> pt_jet = {-7.0, -7.0};
-        std::array<double, 2> eta_jet = {-7.0, -7.0};
-        std::array<double, 2> phi_jet = {-7.0, -7.0};
-        std::array<double, 2> charge_jet = {-7.0, -7.0};
-        std::array<TLorentzVector, 2> p_jet;
+        PRI_n_jets = 0;
 
         int i_leading_jet = -1;
         int i_subleading_jet = -1;
-        double pt_leading_jet = -7;
-        double pt_subleading_jet = -7;
+        double pt_leading_jet = -25;
+        double pt_subleading_jet = -25;
         double jet_all_pt = 0;
 
         for (i = 0; i < branchJet->GetEntriesFast(); ++i)
@@ -202,7 +232,7 @@ void AnalyseEvents(ExRootTreeReader *treeReader, std::string outputFile_part, co
             {
                 continue;
             }
-            n_jet++;
+            PRI_n_jets++;
             jet_all_pt += ptj;
 
             if (ptj > pt_leading_jet)
@@ -222,47 +252,39 @@ void AnalyseEvents(ExRootTreeReader *treeReader, std::string outputFile_part, co
         if (i_leading_jet >= 0)
         {   
             auto jet = (Jet *)branchJet->At(i_leading_jet);
-            pt_jet[0] = jet->PT;
-            eta_jet[0] = jet->Eta;
-            phi_jet[0] = jet->Phi;
-            charge_jet[0] = jet->Charge;
-            p_jet[0] = jet->P4();
+            PRI_jet_leading_pt = jet->PT;
+            PRI_jet_leading_eta = jet->Eta;
+            PRI_jet_leading_phi = jet->Phi;
+            PRI_jet_leading_charge = jet->Charge;
         }
         if (i_subleading_jet >= 0)
         {
             
             auto jet = (Jet *)branchJet->At(i_subleading_jet);
-            pt_jet[1] = jet->PT;
-            eta_jet[1] = jet->Eta;
-            phi_jet[1] = jet->Phi;
-            charge_jet[1] = jet->Charge;
-            p_jet[1] = jet->P4();
+            PRI_jet_subleading_pt = jet->PT;
+            PRI_jet_subleading_eta = jet->Eta;
+            PRI_jet_subleading_phi = jet->Phi;
+            PRI_jet_subleading_charge = jet->Charge;
         }
-        if (n_jet < 2)
+        if (PRI_n_jets < 2)
         {
-            pt_jet[1] = eta_jet[1] = phi_jet[1] = charge_jet[1] = -7;
+            PRI_jet_subleading_pt = PRI_jet_subleading_eta = PRI_jet_subleading_phi = PRI_jet_subleading_charge = -25;
         }
 
-        process_flag = event->ProcessID;
+        Process_flag = event->ProcessID;
         Weight = 1;
 
-        myfile_part << entry << ",";
-        myfile_part << pt_lep << "," << eta_lep << "," << phi_lep << "," << charge_lep << "," << flag_el << "," << flag_mu << ",";
-        myfile_part << pt_had << "," << eta_had << "," << phi_had << "," << charge_had << ",";
-        myfile_part << pt_jet[0] << "," << eta_jet[0] << "," << phi_jet[0] << "," << charge_jet[0] << ",";
-        myfile_part << pt_jet[1] << "," << eta_jet[1] << "," << phi_jet[1] << "," << charge_jet[1] << ",";
-
-        myfile_part << n_jet << "," << jet_all_pt << ",";
-        myfile_part << missingET->MET << "," << missingET->Phi << ",";
-
-        myfile_part << Weight << "," << label << "," << process_flag << std::endl;
+        tree->Fill();
     }
+    
+    // Write and close
+    tree->Write();
     outfile->Write();
     outfile->Close();
 }
 //------------------------------------------------------------------------------
 
-void preProcess(const char *inputFile, std::string outputFile_part, const int label)
+void preProcess(const char *inputFile, std::string outputFile_part, const int label, std::string process_name = "Unknown")
 {
 
     gSystem->Load("libDelphes");
@@ -273,7 +295,7 @@ void preProcess(const char *inputFile, std::string outputFile_part, const int la
     ExRootTreeReader *treeReader = new ExRootTreeReader(chain);
     ExRootResult *result = new ExRootResult();
 
-    AnalyseEvents(treeReader, outputFile_part, label);
+    AnalyseEvents(treeReader, outputFile_part, label, process_name);
 
     std::cout << "** Exiting..." << std::endl;
 

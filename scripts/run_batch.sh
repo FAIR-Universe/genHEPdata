@@ -2,13 +2,13 @@
 #SBATCH --image=rootproject/root:6.28.04-ubuntu22.04 
 #SBATCH --account=m4287
 #SBATCH --qos=regular
-#SBATCH -N 30
+#SBATCH -N 1
 #SBATCH --constraint=cpu
 #SBATCH -t 4:00:00
 #SBATCH -J pythia_gen
 
 
-number_of_jobs=$(($SLURM_NNODES*128))
+number_of_jobs=$(($SLURM_NNODES*128)) # Number of jobs to run set to 128 per node
 main_seed=0
 process=ztautau
 label=0
@@ -27,7 +27,7 @@ echo
 
 module load python
 
-export WorkDir=/global/cfs/cdirs/m4287/hep/genHEPdata
+export WorkDir= # replace with the actual path to your working directory
 
 srun -n $number_of_jobs -c 2 shifter bash -c "
     seed=\$((${main_seed} + \$SLURM_PROCID))

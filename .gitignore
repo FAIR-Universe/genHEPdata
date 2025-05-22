@@ -8,3 +8,4 @@ bin/
 *.so
 *.ipynb__checkpoints*
 *.pyc
+Output
