@@ -45,7 +45,7 @@ singularity exec --bind $WorkDir:/program \
     docker://ragansu/root-delphes:pythia_pip_new bash /program/scripts/run_generator.sh ${seed} ${process} ${label} 
 ```
 
-Each job will generate the number of events set in the cmnd files. To increase the numbers one can modify the cmnd files. But an better way would be send parallel jobs by setting approprate seeds. and example of this can be found in `genHEPdata/scripts/run_batch.sh`. Here it is parallised with srun. 
+Each job will generate the number of events set in the cmnd files. To increase the numbers one can modify the cmnd files. But a better way would be send parallel jobs by setting appropriate seeds. An example of this can be found in `genHEPdata/scripts/run_batch.sh`. Here it is parallised with srun. 
 
 ## Merging the output
 
