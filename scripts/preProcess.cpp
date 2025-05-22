@@ -134,7 +134,7 @@ void AnalyseEvents(ExRootTreeReader *treeReader, std::string outputFile_part, co
             {
                 PRI_lep_pt = electron->PT;
                 PRI_lep_eta = electron->Eta;
-                PRI_lep_eta = electron->Phi;
+                PRI_lep_phi = electron->Phi;
                 PRI_lep_charge = electron->Charge;
                 p_lep = electron->P4();
                 flag_el++;
