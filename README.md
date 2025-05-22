@@ -13,7 +13,7 @@ Step 1.
 git clone https://github.com/FAIR-Universe/genHEPdata.git
 cd genHEPdata/scripts
 ```
-set the ENV variablea correctly. 
+set the ENV variables correctly. 
 ```
 export DELPHES_DIR=/path/to/delphes
 bash ./run_generate.sh <seed> <process> <label>
