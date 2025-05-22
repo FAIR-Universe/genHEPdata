@@ -30,8 +30,6 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-test_set_settings = None
-
 
 class Data:
     """
@@ -155,7 +153,6 @@ class Data:
         self.__train_set = {
             "data": sampled_df,
             "labels": selected_train_labels,
-            "settings": selected_train_labels,
             "weights": selected_train_weights,
             "detailed_labels": selected_train_detailed_labels,
         }
@@ -193,14 +190,6 @@ class Data:
 
         self.__test_set = test_set
 
-        test_settings_file = os.path.join(
-            self.input_dir, "test", "settings", "data.json"
-        )
-        with open(test_settings_file) as f:
-            test_settings = json.load(f)
-
-        self.ground_truth_mus = test_settings["ground_truth_mus"]
-
         for key in self.__test_set.keys():
             buffer = io.StringIO()
             self.__test_set[key].info(buf=buffer, memory_usage="deep", verbose=False)
@@ -234,8 +223,10 @@ class Data:
         merged_data.append(self.__train_df)
         merged_data = pd.concat(merged_data, ignore_index=True)
         
-        merged_data["weights"] = merged_data["weights"].astype(np.float32) / 2
+        # We are merging the previous test and train set hence the sum of weights will be double the normal amount.  
+        # Hence a normalisation (dived by 2) is needed.
                 
+        merged_data["weights"] = merged_data["weights"].astype(np.float32) / 2  
         return merged_data
 
         

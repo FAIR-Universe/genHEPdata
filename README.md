@@ -5,7 +5,7 @@
 This is repository contains the scripts to use for generating HEP sample data with Pythia 8 and Delphes
 
 * The cmnd file for each  process is available in the `share` directory
-* The necessary scripts for generating data is in scripts directory
+* The necessary scripts for generating data are in scripts directory
 
 To generate data use
 Step 1.
@@ -21,7 +21,7 @@ bash ./run_generate.sh <seed> <process> <label>
 
 for example `seed` could be 26 and process could be ztautau and hence label will be 0 since its background
 
-The Repository also contains a Docker file which can help you create the necessary docker image, If running with the image in docker,podman, singularity etc the `DELPHES_DIR` varibale is already assigned.
+The Repository also contains a Docker file which can help you create the necessary docker image, If running with the image in docker,podman, singularity etc the `DELPHES_DIR` variable is already assigned.
 
 Example for podman
 ```
