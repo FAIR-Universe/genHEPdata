@@ -149,7 +149,7 @@ void AnalyseEvents(ExRootTreeReader *treeReader, std::string outputFile_part, co
             {
                 PRI_lep_pt = muon->PT;
                 PRI_lep_eta = muon->Eta;
-                PRI_lep_eta = muon->Phi;
+                PRI_lep_phi = muon->Phi;
                 PRI_lep_charge = muon->Charge;
                 p_lep = muon->P4();
                 flag_mu++;
