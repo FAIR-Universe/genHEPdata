@@ -5,7 +5,7 @@
 This is repository contains the scripts to use for generating HEP sample data with Pythia 8 and Delphes
 
 * The cmnd file for each  process is available in the `share` directory
-* The neccesary scripts for generating data is in scripts directory
+* The necessary scripts for generating data is in scripts directory
 
 To generate data use
 Step 1.
